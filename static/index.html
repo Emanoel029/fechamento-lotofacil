@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Fechamento Lotofácil — 7 exclusões / 24 jogos</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="topo">
+  <h1>Fechamento Lotofácil</h1>
+  <p class="subtitulo">Marque 7 números para excluir e gere 24 jogos equilibrados</p>
+  <nav class="abas">
+    <button id="aba-criar" class="aba ativa">Criar jogo</button>
+    <button id="aba-salvos" class="aba">Jogos salvos</button>
+    <button id="aba-historico" class="aba">Histórico</button>
+  </nav>
+</header>
+
+<main id="vista-criar">
+  <section class="cartao" id="secao-concurso">
+    <h2>1. Escolha o concurso</h2>
+    <div class="linha-modo">
+      <button id="modo-realizado" class="modo ativo">Sorteio já realizado</button>
+      <button id="modo-proximo" class="modo">Próximo sorteio (ainda não saiu)</button>
+    </div>
+
+    <div id="bloco-realizado">
+      <div class="linha-concurso">
+        <label for="input-concurso">Número do concurso</label>
+        <input type="number" id="input-concurso" min="1" placeholder="mais recente" />
+        <button id="botao-buscar">Buscar</button>
+        <button id="botao-mais-recente" class="botao-secundario">Usar o mais recente</button>
+      </div>
+      <div id="status-concurso" class="status"></div>
+      <div id="resultado-concurso" class="resultado-concurso oculto">
+        <p>Concurso <strong id="numero-concurso"></strong> — sorteio de <strong id="data-concurso"></strong></p>
+        <p class="legenda">Números sorteados (roxo) e números que ficaram de fora (laranja):</p>
+        <div id="grade-resultado" class="grade-numeros"></div>
+      </div>
+    </div>
+
+    <div id="bloco-proximo" class="oculto">
+      <div id="status-proximo" class="status"></div>
+      <div id="resultado-proximo" class="resultado-concurso oculto">
+        <p>
+          Concurso <strong id="numero-proximo"></strong> — sorteio previsto para
+          <strong id="data-proximo"></strong>
+        </p>
+        <p class="legenda">
+          Esse sorteio ainda não aconteceu, por isso não há números sorteados pra comparar ainda.
+          Escolha abaixo os 7 números que você acha que não vão sair.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="cartao" id="secao-selecao">
+    <h2>2. Marque 7 números para excluir</h2>
+    <p class="legenda" id="legenda-selecao">
+      Clique em 7 números para excluir dos jogos. Os números com borda laranja são os que não saíram
+      no sorteio escolhido — a estratégia sugere escolher entre eles, mas você pode marcar
+      qualquer um dos 25, inclusive números que saíram, se quiser testar o que aconteceria
+      errando algum palpite.
+    </p>
+    <div id="grade-selecao" class="grade-numeros"></div>
+    <p class="contador">
+      Selecionados: <span id="contador-selecionados">0</span> de 7
+      <span id="contador-detalhe" class="contador-detalhe"></span>
+    </p>
+    <button id="botao-gerar" disabled>Gerar jogos</button>
+    <div id="status-gerar" class="status"></div>
+  </section>
+
+  <section class="cartao oculto" id="secao-jogos">
+    <h2>3. Os 24 jogos gerados</h2>
+    <div class="linha-acoes">
+      <button id="botao-salvar">Salvar este jogo</button>
+      <button id="botao-exportar" class="botao-secundario">Exportar para Excel</button>
+    </div>
+    <div id="status-acoes" class="status"></div>
+    <div id="grade-jogos" class="grade-jogos"></div>
+  </section>
+
+  <section class="cartao oculto" id="secao-comparacao">
+    <h2>4. Comparação com o resultado real</h2>
+    <table class="tabela-comparacao">
+      <thead>
+        <tr><th>Acerto</th><th>Quantidade</th><th>Prêmio por jogo (R$)</th><th>Total (R$)</th></tr>
+      </thead>
+      <tbody id="corpo-tabela-comparacao"></tbody>
+      <tfoot>
+        <tr>
+          <td><strong>Total</strong></td>
+          <td id="total-jogos-premiados"><strong>0</strong></td>
+          <td></td>
+          <td id="total-valor"><strong>0,00</strong></td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+</main>
+
+<main id="vista-salvos" class="oculto">
+  <section class="cartao">
+    <h2>Jogos salvos</h2>
+    <p class="legenda" id="texto-sem-salvos">Você ainda não salvou nenhum jogo.</p>
+    <div id="lista-salvos" class="lista-salvos"></div>
+  </section>
+
+  <section class="cartao oculto" id="secao-detalhe-salvo">
+    <h2 id="titulo-detalhe-salvo">Detalhe do jogo salvo</h2>
+    <p id="mensagem-aguardando-salvo" class="legenda oculto"></p>
+    <div id="grade-jogos-salvo" class="grade-jogos"></div>
+    <table class="tabela-comparacao oculto" id="tabela-comparacao-salvo">
+      <thead>
+        <tr><th>Acerto</th><th>Quantidade</th><th>Prêmio por jogo (R$)</th><th>Total (R$)</th></tr>
+      </thead>
+      <tbody id="corpo-tabela-salvo"></tbody>
+      <tfoot>
+        <tr>
+          <td><strong>Total</strong></td>
+          <td id="total-jogos-premiados-salvo"><strong>0</strong></td>
+          <td></td>
+          <td id="total-valor-salvo"><strong>0,00</strong></td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+</main>
+
+<main id="vista-historico" class="oculto">
+  <section class="cartao">
+    <h2>Histórico dos últimos concursos</h2>
+    <div class="linha-quantidade" id="linha-quantidade"></div>
+    <div class="linha-visao">
+      <button id="visao-sorteados" class="ativo">Números sorteados</button>
+      <button id="visao-ausentes">Números que ficaram de fora</button>
+    </div>
+    <div id="status-historico" class="status"></div>
+
+    <div id="bloco-historico" class="oculto">
+      <p class="legenda" id="legenda-frequencia">Frequência de cada dezena no período (da que mais saiu pra que menos saiu):</p>
+      <div id="fileira-frequencia" class="fileira-frequencia"></div>
+
+      <div class="tabela-historico-caixa">
+        <table class="tabela-historico" id="tabela-historico">
+          <thead>
+            <tr id="cabecalho-historico"></tr>
+          </thead>
+          <tbody id="corpo-historico"></tbody>
+          <tfoot id="rodape-historico"></tfoot>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

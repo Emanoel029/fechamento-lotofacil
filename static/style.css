@@ -1,0 +1,492 @@
+:root {
+  color-scheme: light dark;
+  --cor-fundo: #f4f5f7;
+  --cor-texto: #1f2430;
+  --cor-cartao: #ffffff;
+  --cor-borda: #e1e3e8;
+  --cor-laranja: #f5821f;
+  --cor-roxo: #7b2d8e;
+  --cor-vermelho: #d6473c;
+  --cor-cinza: #e9eaed;
+  --cor-destaque-texto: #ffffff;
+  --cor-frequencia: var(--cor-roxo);
+}
+
+#bloco-historico.visao-ausentes {
+  --cor-frequencia: var(--cor-laranja);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --cor-fundo: #15171c;
+    --cor-texto: #e8e9ed;
+    --cor-cartao: #1f222a;
+    --cor-borda: #30333c;
+    --cor-cinza: #2a2d35;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--cor-fundo);
+  color: var(--cor-texto);
+  font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  margin: 0;
+  padding: 24px 16px 64px;
+}
+
+header.topo {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+header.topo h1 {
+  margin: 0 0 4px;
+  font-size: 1.6rem;
+}
+
+.subtitulo {
+  margin: 0;
+  color: #8a8f99;
+}
+
+.abas {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.aba {
+  background: var(--cor-cinza);
+  color: var(--cor-texto);
+  font-weight: 600;
+}
+
+.aba.ativa {
+  background: var(--cor-roxo);
+  color: white;
+}
+
+main {
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+#vista-historico {
+  max-width: 1500px;
+}
+
+.cartao {
+  background: var(--cor-cartao);
+  border: 1px solid var(--cor-borda);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.cartao h2 {
+  margin-top: 0;
+  font-size: 1.1rem;
+}
+
+.legenda {
+  color: #8a8f99;
+  font-size: 0.9rem;
+}
+
+.linha-modo {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.modo {
+  background: var(--cor-cinza);
+  color: var(--cor-texto);
+}
+
+.modo.ativo {
+  background: var(--cor-roxo);
+  color: white;
+}
+
+.linha-concurso {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.linha-concurso label {
+  font-size: 0.9rem;
+}
+
+.linha-concurso input {
+  width: 120px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--cor-borda);
+  background: var(--cor-fundo);
+  color: var(--cor-texto);
+}
+
+button {
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: none;
+  background: var(--cor-roxo);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+button.botao-secundario {
+  background: var(--cor-cinza);
+  color: var(--cor-texto);
+}
+
+.status {
+  min-height: 1.2em;
+  font-size: 0.9rem;
+  margin-top: 8px;
+}
+
+.status.erro { color: var(--cor-vermelho); }
+.status.ok { color: #2d8a4e; }
+
+.oculto { display: none !important; }
+
+.resultado-concurso { margin-top: 12px; }
+
+.grade-numeros {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
+  gap: 8px;
+  max-width: 480px;
+}
+
+.numero {
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  background: var(--cor-cinza);
+  color: var(--cor-texto);
+  user-select: none;
+}
+
+.numero.clicavel {
+  cursor: pointer;
+  border: 2px solid transparent;
+}
+
+.numero.ausente {
+  border: 2px solid var(--cor-laranja);
+}
+
+.numero.sorteado {
+  background: var(--cor-roxo);
+  color: white;
+}
+
+.numero.excluido {
+  background: var(--cor-vermelho);
+  color: white;
+  border-color: var(--cor-vermelho);
+}
+
+.contador {
+  font-size: 0.9rem;
+  margin: 12px 0;
+}
+
+.contador-detalhe {
+  color: #8a8f99;
+}
+
+.grade-jogos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.cartao-jogo {
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.cartao-jogo h3 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cartao-jogo.destaque-14 {
+  border: 2px solid #c08a1f;
+  background: color-mix(in srgb, #c08a1f 10%, var(--cor-cartao));
+}
+
+.cartao-jogo.destaque-15 {
+  border: 2px solid #b8860b;
+  background: color-mix(in srgb, #ffd700 18%, var(--cor-cartao));
+  box-shadow: 0 0 0 1px #b8860b;
+}
+
+.selo-pontos {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #c08a1f;
+  color: white;
+}
+
+.destaque-15 .selo-pontos {
+  background: #b8860b;
+}
+
+.mini-grade {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+}
+
+.mini-numero {
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--cor-cinza);
+  color: #b6b9c1;
+}
+
+.mini-numero.presente {
+  background: var(--cor-roxo);
+  color: white;
+}
+
+.tabela-comparacao {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tabela-comparacao th,
+.tabela-comparacao td {
+  padding: 10px;
+  text-align: center;
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.tabela-comparacao tfoot td {
+  border-top: 2px solid var(--cor-borda);
+  border-bottom: none;
+}
+
+.linha-acoes {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.lista-salvos {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.item-salvo {
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.item-salvo .info-salvo {
+  font-size: 0.9rem;
+}
+
+.item-salvo .info-salvo strong {
+  font-size: 1rem;
+}
+
+.item-salvo .acoes-salvo {
+  display: flex;
+  gap: 6px;
+}
+
+.item-salvo .acoes-salvo button {
+  padding: 6px 10px;
+  font-size: 0.85rem;
+}
+
+button.botao-perigo {
+  background: var(--cor-vermelho);
+}
+
+/* ---------- Histórico ---------- */
+
+.linha-quantidade {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.linha-quantidade button {
+  background: var(--cor-cinza);
+  color: var(--cor-texto);
+  padding: 8px 14px;
+}
+
+.linha-quantidade button.ativo {
+  background: var(--cor-roxo);
+  color: white;
+}
+
+.linha-visao {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.linha-visao button {
+  background: var(--cor-cinza);
+  color: var(--cor-texto);
+  padding: 8px 14px;
+}
+
+#visao-sorteados.ativo {
+  background: var(--cor-roxo);
+  color: white;
+}
+
+#visao-ausentes.ativo {
+  background: var(--cor-laranja);
+  color: white;
+}
+
+.fileira-frequencia {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0 20px;
+}
+
+.item-frequencia {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 54px;
+  padding: 10px 6px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--cor-frequencia) calc(35% + var(--intensidade) * 65%), var(--cor-cinza));
+}
+
+.item-frequencia .numero-frequencia {
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.item-frequencia .contagem-frequencia {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: white;
+  opacity: 0.95;
+}
+
+.item-frequencia.texto-escuro .numero-frequencia,
+.item-frequencia.texto-escuro .contagem-frequencia {
+  color: var(--cor-texto);
+  text-shadow: none;
+  opacity: 1;
+}
+
+.tabela-historico-caixa {
+  overflow-x: auto;
+  max-width: 100%;
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+}
+
+.tabela-historico {
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.tabela-historico th,
+.tabela-historico td {
+  padding: 8px 11px;
+  text-align: center;
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.tabela-historico thead th {
+  position: sticky;
+  top: 0;
+  background: var(--cor-cartao);
+  z-index: 1;
+}
+
+.tabela-historico td.coluna-concurso,
+.tabela-historico th.coluna-concurso {
+  text-align: left;
+  font-weight: 700;
+  background: var(--cor-cartao);
+  position: sticky;
+  left: 0;
+  z-index: 2;
+}
+
+.tabela-historico td.numero-sorteado {
+  background: var(--cor-frequencia);
+  color: white;
+  font-weight: 800;
+  font-size: 1rem;
+  border-radius: 6px;
+}
+
+.tabela-historico td.sem-repetentes {
+  color: #8a8f99;
+}
+
+.tabela-historico td.maior {
+  background: var(--cor-texto);
+  color: var(--cor-fundo);
+  font-weight: 700;
+  border-radius: 6px;
+}
+
+.tabela-historico tfoot td {
+  font-weight: 700;
+  border-top: 2px solid var(--cor-borda);
+  border-bottom: none;
+}

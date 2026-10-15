@@ -157,6 +157,7 @@ def _diagnosticar_rede() -> dict:
         "ip_publico_do_servidor": "https://api.ipify.org?format=json",
         "caixa_oficial": CAIXA_BASE,
         "espelho_guidi": f"{CAIXA_BASE_RESERVA}/ultimo",
+        "espelho_heroku": "https://loteriascaixa-api.herokuapp.com/api/lotofacil/latest",
     }
     resultado = {}
     for nome, url in alvos.items():

@@ -135,9 +135,21 @@ class ErroDeBusca(Exception):
         self.status = status
 
 
+_CABECALHOS_CAIXA = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Referer": "https://loterias.caixa.gov.br/",
+    "Origin": "https://loterias.caixa.gov.br",
+}
+
+
 def _buscar_dados_brutos_na_caixa(numero: int | None) -> dict:
     url = CAIXA_BASE if numero is None else f"{CAIXA_BASE}/{numero}"
-    requisicao = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    requisicao = urllib.request.Request(url, headers=_CABECALHOS_CAIXA)
     try:
         with urllib.request.urlopen(requisicao, timeout=15) as resposta:
             return json.loads(resposta.read())

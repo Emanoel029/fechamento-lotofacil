@@ -150,6 +150,29 @@ _CABECALHOS_CAIXA = {
 }
 
 
+def _diagnosticar_rede() -> dict:
+    """Rota temporária só pra descobrir, rodando de verdade no servidor publicado,
+    o que acontece ao tentar buscar os dados — remover depois de resolver."""
+    alvos = {
+        "ip_publico_do_servidor": "https://api.ipify.org?format=json",
+        "caixa_oficial": CAIXA_BASE,
+        "espelho_guidi": f"{CAIXA_BASE_RESERVA}/ultimo",
+    }
+    resultado = {}
+    for nome, url in alvos.items():
+        try:
+            requisicao = urllib.request.Request(url, headers=_CABECALHOS_CAIXA)
+            with urllib.request.urlopen(requisicao, timeout=10) as resposta:
+                corpo = resposta.read(300).decode("utf-8", errors="replace")
+                resultado[nome] = {"status": resposta.status, "trecho": corpo}
+        except urllib.error.HTTPError as erro:
+            corpo = erro.read(300).decode("utf-8", errors="replace")
+            resultado[nome] = {"erro_http": erro.code, "trecho": corpo}
+        except Exception as erro:  # noqa: BLE001 - diagnóstico, queremos ver qualquer erro
+            resultado[nome] = {"excecao": f"{type(erro).__name__}: {erro}"}
+    return resultado
+
+
 def _requisitar_json(url: str) -> dict:
     requisicao = urllib.request.Request(url, headers=_CABECALHOS_CAIXA)
     with urllib.request.urlopen(requisicao, timeout=15) as resposta:
@@ -474,6 +497,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._enviar_json({"erro": erro.mensagem}, erro.status)
                 return
             self._enviar_json(dados)
+            return
+
+        if url.path == "/api/debug-rede":
+            self._enviar_json(_diagnosticar_rede())
             return
 
         if url.path == "/api/proximo-concurso":

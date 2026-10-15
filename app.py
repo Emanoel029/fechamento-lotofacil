@@ -24,9 +24,10 @@ from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 
 CAIXA_BASE = "https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil"
-# Espelho público com os mesmos dados da Caixa — usado como reserva quando o site oficial
+# Espelhos públicos com os mesmos dados da Caixa — usados como reserva quando o site oficial
 # bloqueia o pedido (acontece em alguns servidores de hospedagem na nuvem).
 CAIXA_BASE_RESERVA = "https://api.guidi.dev.br/loteria/lotofacil"
+HEROKU_BASE_RESERVA = "https://loteriascaixa-api.herokuapp.com/api/lotofacil"
 TODOS_OS_NUMEROS = list(range(1, 26))
 EXCLUIDOS_PELO_USUARIO = 7
 TOTAL_DE_JOGOS = 24
@@ -150,58 +151,85 @@ _CABECALHOS_CAIXA = {
 }
 
 
-def _diagnosticar_rede() -> dict:
-    """Rota temporária só pra descobrir, rodando de verdade no servidor publicado,
-    o que acontece ao tentar buscar os dados — remover depois de resolver."""
-    alvos = {
-        "ip_publico_do_servidor": "https://api.ipify.org?format=json",
-        "caixa_oficial": CAIXA_BASE,
-        "espelho_guidi": f"{CAIXA_BASE_RESERVA}/ultimo",
-        "espelho_heroku": "https://loteriascaixa-api.herokuapp.com/api/lotofacil/latest",
-    }
-    resultado = {}
-    for nome, url in alvos.items():
-        try:
-            requisicao = urllib.request.Request(url, headers=_CABECALHOS_CAIXA)
-            with urllib.request.urlopen(requisicao, timeout=10) as resposta:
-                corpo = resposta.read(300).decode("utf-8", errors="replace")
-                resultado[nome] = {"status": resposta.status, "trecho": corpo}
-        except urllib.error.HTTPError as erro:
-            corpo = erro.read(300).decode("utf-8", errors="replace")
-            resultado[nome] = {"erro_http": erro.code, "trecho": corpo}
-        except Exception as erro:  # noqa: BLE001 - diagnóstico, queremos ver qualquer erro
-            resultado[nome] = {"excecao": f"{type(erro).__name__}: {erro}"}
-    return resultado
-
-
 def _requisitar_json(url: str) -> dict:
     requisicao = urllib.request.Request(url, headers=_CABECALHOS_CAIXA)
     with urllib.request.urlopen(requisicao, timeout=15) as resposta:
         return json.loads(resposta.read())
 
 
-def _buscar_dados_brutos_na_caixa(numero: int | None) -> dict:
-    url_oficial = CAIXA_BASE if numero is None else f"{CAIXA_BASE}/{numero}"
-    try:
-        return _requisitar_json(url_oficial)
-    except urllib.error.HTTPError as erro:
-        if erro.code in (404, 500):
-            # A API da Caixa devolve 500 quando o concurso ainda não foi sorteado.
-            raise ErroDeBusca("Concurso não encontrado ou ainda não sorteado.", 404)
-        # Outro erro (ex: 403) pode ser o site oficial bloqueando esse servidor —
-        # tenta o espelho antes de desistir.
-    except (urllib.error.URLError, TimeoutError):
-        pass
+def _normalizar_formato_oficial(bruto: dict) -> dict:
+    """A Caixa e o espelho guidi.dev.br usam exatamente o mesmo formato."""
+    return {
+        "numero": bruto["numero"],
+        "dataApuracao": bruto.get("dataApuracao"),
+        "listaDezenas": bruto["listaDezenas"],
+        "listaRateioPremio": bruto.get("listaRateioPremio", []),
+        "numeroConcursoProximo": bruto.get("numeroConcursoProximo"),
+        "dataProximoConcurso": bruto.get("dataProximoConcurso"),
+        "valorEstimadoProximoConcurso": bruto.get("valorEstimadoProximoConcurso", 0),
+    }
 
-    url_reserva = f"{CAIXA_BASE_RESERVA}/ultimo" if numero is None else f"{CAIXA_BASE_RESERVA}/{numero}"
-    try:
-        return _requisitar_json(url_reserva)
-    except urllib.error.HTTPError as erro:
-        if erro.code in (404, 500):
-            raise ErroDeBusca("Concurso não encontrado ou ainda não sorteado.", 404)
-        raise ErroDeBusca(f"Não consegui buscar esse concurso agora (erro {erro.code}).")
-    except (urllib.error.URLError, TimeoutError) as erro:
-        raise ErroDeBusca(f"Não consegui buscar esse concurso agora: {erro}")
+
+def _normalizar_formato_heroku(bruto: dict) -> dict:
+    """O espelho no Heroku usa nomes de campo diferentes — traduz pro formato padrão."""
+    premios = [
+        {
+            "descricaoFaixa": premio.get("descricao"),
+            "valorPremio": premio.get("valorPremio", 0),
+            "numeroDeGanhadores": premio.get("ganhadores", 0),
+        }
+        for premio in bruto.get("premiacoes", [])
+    ]
+    return {
+        "numero": bruto["concurso"],
+        "dataApuracao": bruto.get("data"),
+        "listaDezenas": bruto["dezenas"],
+        "listaRateioPremio": premios,
+        "numeroConcursoProximo": bruto.get("proximoConcurso"),
+        "dataProximoConcurso": bruto.get("dataProximoConcurso"),
+        "valorEstimadoProximoConcurso": bruto.get("valorEstimadoProximoConcurso", 0),
+    }
+
+
+# Tenta sempre o site oficial primeiro; se ele bloquear o pedido (acontece em alguns
+# servidores de hospedagem na nuvem), tenta os espelhos na ordem abaixo.
+_FONTES_DE_DADOS = [
+    {
+        "nome": "oficial",
+        "url": lambda numero: CAIXA_BASE if numero is None else f"{CAIXA_BASE}/{numero}",
+        "normalizar": _normalizar_formato_oficial,
+    },
+    {
+        "nome": "espelho (guidi.dev.br)",
+        "url": lambda numero: f"{CAIXA_BASE_RESERVA}/ultimo" if numero is None else f"{CAIXA_BASE_RESERVA}/{numero}",
+        "normalizar": _normalizar_formato_oficial,
+    },
+    {
+        "nome": "espelho (heroku)",
+        "url": lambda numero: f"{HEROKU_BASE_RESERVA}/latest" if numero is None else f"{HEROKU_BASE_RESERVA}/{numero}",
+        "normalizar": _normalizar_formato_heroku,
+    },
+]
+
+
+def _buscar_dados_brutos_na_caixa(numero: int | None) -> dict:
+    ultimo_erro: Exception | None = None
+
+    for fonte in _FONTES_DE_DADOS:
+        try:
+            bruto = _requisitar_json(fonte["url"](numero))
+            return fonte["normalizar"](bruto)
+        except urllib.error.HTTPError as erro:
+            if erro.code in (404, 500):
+                # Concurso não existe ou ainda não foi sorteado — não adianta tentar as outras fontes.
+                raise ErroDeBusca("Concurso não encontrado ou ainda não sorteado.", 404)
+            ultimo_erro = erro
+        except (urllib.error.URLError, TimeoutError, KeyError) as erro:
+            ultimo_erro = erro
+
+    if isinstance(ultimo_erro, urllib.error.HTTPError):
+        raise ErroDeBusca(f"Não consegui buscar esse concurso agora (erro {ultimo_erro.code}).")
+    raise ErroDeBusca(f"Não consegui buscar esse concurso agora: {ultimo_erro}")
 
 
 def buscar_concurso_na_caixa(numero: int | None) -> dict:
@@ -498,10 +526,6 @@ class Handler(BaseHTTPRequestHandler):
                 self._enviar_json({"erro": erro.mensagem}, erro.status)
                 return
             self._enviar_json(dados)
-            return
-
-        if url.path == "/api/debug-rede":
-            self._enviar_json(_diagnosticar_rede())
             return
 
         if url.path == "/api/proximo-concurso":

@@ -24,6 +24,9 @@ from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 
 CAIXA_BASE = "https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil"
+# Espelho público com os mesmos dados da Caixa — usado como reserva quando o site oficial
+# bloqueia o pedido (acontece em alguns servidores de hospedagem na nuvem).
+CAIXA_BASE_RESERVA = "https://api.guidi.dev.br/loteria/lotofacil"
 TODOS_OS_NUMEROS = list(range(1, 26))
 EXCLUIDOS_PELO_USUARIO = 7
 TOTAL_DE_JOGOS = 24
@@ -147,15 +150,30 @@ _CABECALHOS_CAIXA = {
 }
 
 
-def _buscar_dados_brutos_na_caixa(numero: int | None) -> dict:
-    url = CAIXA_BASE if numero is None else f"{CAIXA_BASE}/{numero}"
+def _requisitar_json(url: str) -> dict:
     requisicao = urllib.request.Request(url, headers=_CABECALHOS_CAIXA)
+    with urllib.request.urlopen(requisicao, timeout=15) as resposta:
+        return json.loads(resposta.read())
+
+
+def _buscar_dados_brutos_na_caixa(numero: int | None) -> dict:
+    url_oficial = CAIXA_BASE if numero is None else f"{CAIXA_BASE}/{numero}"
     try:
-        with urllib.request.urlopen(requisicao, timeout=15) as resposta:
-            return json.loads(resposta.read())
+        return _requisitar_json(url_oficial)
     except urllib.error.HTTPError as erro:
         if erro.code in (404, 500):
             # A API da Caixa devolve 500 quando o concurso ainda não foi sorteado.
+            raise ErroDeBusca("Concurso não encontrado ou ainda não sorteado.", 404)
+        # Outro erro (ex: 403) pode ser o site oficial bloqueando esse servidor —
+        # tenta o espelho antes de desistir.
+    except (urllib.error.URLError, TimeoutError):
+        pass
+
+    url_reserva = f"{CAIXA_BASE_RESERVA}/ultimo" if numero is None else f"{CAIXA_BASE_RESERVA}/{numero}"
+    try:
+        return _requisitar_json(url_reserva)
+    except urllib.error.HTTPError as erro:
+        if erro.code in (404, 500):
             raise ErroDeBusca("Concurso não encontrado ou ainda não sorteado.", 404)
         raise ErroDeBusca(f"Não consegui buscar esse concurso agora (erro {erro.code}).")
     except (urllib.error.URLError, TimeoutError) as erro:

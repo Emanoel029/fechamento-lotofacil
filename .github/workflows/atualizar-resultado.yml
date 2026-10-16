@@ -34,39 +34,3 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add espelho/ultimo_resultado.json
           git diff --cached --quiet && echo "Sem mudanças." || (git commit -m "Atualiza espelho/ultimo_resultado.json [automático]" && git push)
-name: Atualizar resultado mais recente da Lotofácil
-
-on:
-  schedule:
-    # A cada 20 minutos. O GitHub não garante o minuto exato, mas roda com essa frequência.
-    - cron: "*/20 * * * *"
-  workflow_dispatch: {}
-
-permissions:
-  contents: write
-
-jobs:
-  atualizar:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Baixar o repositório
-        uses: actions/checkout@v4
-
-      - name: Buscar o resultado mais recente na Caixa
-        run: |
-          mkdir -p espelho
-          curl -sS -f \
-            -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36" \
-            -H "Accept: application/json, text/plain, */*" \
-            "https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil" \
-            -o espelho/ultimo_resultado.json
-
-      - name: Conferir se o arquivo é um JSON válido com número de concurso
-        run: python3 -c "import json; d = json.load(open('espelho/ultimo_resultado.json')); assert d.get('numero'); print('concurso', d['numero'], 'ok')"
-
-      - name: Publicar a atualização (se mudou algo)
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add espelho/ultimo_resultado.json
-          git diff --cached --quiet && echo "Sem mudanças." || (git commit -m "Atualiza espelho/ultimo_resultado.json [automático]" && git push)

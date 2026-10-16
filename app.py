@@ -215,7 +215,19 @@ def _diagnosticar_rede() -> dict:
     return resultado
 
 
+GITHUB_RAW_ESPELHO = (
+    "https://raw.githubusercontent.com/Emanoel029/fechamento-lotofacil/main/espelho/ultimo_resultado.json"
+)
+
 _FONTES_DE_DADOS = [
+    {
+        # Arquivo que um robô do GitHub atualiza sozinho a cada ~20 minutos, buscando
+        # direto da Caixa — não sofre o bloqueio que alguns servidores de hospedagem
+        # tomam, porque aqui só estamos lendo um arquivo público, não fazendo a busca.
+        "nome": "espelho (GitHub, atualizado automaticamente)",
+        "url": lambda numero: GITHUB_RAW_ESPELHO,
+        "normalizar": _normalizar_formato_oficial,
+    },
     {
         "nome": "oficial",
         "url": lambda numero: CAIXA_BASE if numero is None else f"{CAIXA_BASE}/{numero}",
@@ -238,6 +250,8 @@ def _buscar_dados_brutos_na_caixa(numero: int | None) -> dict:
     # Importante: uma fonte (espelho) pode responder 404 pra um concurso bem recente só
     # porque ela ainda não atualizou — não é prova de que o concurso não existe. Por isso,
     # NUNCA paramos no primeiro 404: sempre tentamos todas as fontes antes de desistir.
+    # (O espelho do GitHub só guarda o concurso mais recente — se o número pedido for
+    # outro, não vale como resposta pra essa busca específica, só pula pra próxima fonte.)
     candidatos: list[dict] = []
     ultimo_erro: Exception | None = None
 
@@ -246,7 +260,8 @@ def _buscar_dados_brutos_na_caixa(numero: int | None) -> dict:
             bruto = _requisitar_json(fonte["url"](numero))
             normalizado = fonte["normalizar"](bruto)
             if numero is not None:
-                # Concurso específico: a primeira fonte que realmente tiver esse concurso já basta.
+                if normalizado["numero"] != numero:
+                    continue
                 return normalizado
             candidatos.append(normalizado)
         except urllib.error.HTTPError as erro:

@@ -193,6 +193,28 @@ def _normalizar_formato_heroku(bruto: dict) -> dict:
 
 # Tenta sempre o site oficial primeiro; se ele bloquear o pedido (acontece em alguns
 # servidores de hospedagem na nuvem), tenta os espelhos na ordem abaixo.
+def _diagnosticar_rede() -> dict:
+    """Rota temporária só pra conferir, rodando de verdade no servidor publicado, se as
+    fontes oficiais continuam bloqueadas hoje — remover depois de conferir."""
+    alvos = {
+        "caixa_oficial_mais_recente": CAIXA_BASE,
+        "guidi_mais_recente": f"{CAIXA_BASE_RESERVA}/ultimo",
+        "heroku_mais_recente": f"{HEROKU_BASE_RESERVA}/latest",
+    }
+    resultado = {}
+    for nome, url in alvos.items():
+        try:
+            requisicao = urllib.request.Request(url, headers=_CABECALHOS_CAIXA)
+            with urllib.request.urlopen(requisicao, timeout=10) as resposta:
+                corpo = json.loads(resposta.read())
+                resultado[nome] = {"status": resposta.status, "numero": corpo.get("numero") or corpo.get("concurso")}
+        except urllib.error.HTTPError as erro:
+            resultado[nome] = {"erro_http": erro.code}
+        except Exception as erro:  # noqa: BLE001 - diagnóstico
+            resultado[nome] = {"excecao": f"{type(erro).__name__}: {erro}"}
+    return resultado
+
+
 _FONTES_DE_DADOS = [
     {
         "nome": "oficial",
@@ -213,20 +235,32 @@ _FONTES_DE_DADOS = [
 
 
 def _buscar_dados_brutos_na_caixa(numero: int | None) -> dict:
+    # Importante: uma fonte (espelho) pode responder 404 pra um concurso bem recente só
+    # porque ela ainda não atualizou — não é prova de que o concurso não existe. Por isso,
+    # NUNCA paramos no primeiro 404: sempre tentamos todas as fontes antes de desistir.
+    candidatos: list[dict] = []
     ultimo_erro: Exception | None = None
 
     for fonte in _FONTES_DE_DADOS:
         try:
             bruto = _requisitar_json(fonte["url"](numero))
-            return fonte["normalizar"](bruto)
+            normalizado = fonte["normalizar"](bruto)
+            if numero is not None:
+                # Concurso específico: a primeira fonte que realmente tiver esse concurso já basta.
+                return normalizado
+            candidatos.append(normalizado)
         except urllib.error.HTTPError as erro:
-            if erro.code in (404, 500):
-                # Concurso não existe ou ainda não foi sorteado — não adianta tentar as outras fontes.
-                raise ErroDeBusca("Concurso não encontrado ou ainda não sorteado.", 404)
             ultimo_erro = erro
         except (urllib.error.URLError, TimeoutError, KeyError) as erro:
             ultimo_erro = erro
 
+    if candidatos:
+        # "Mais recente": usa o maior número de concurso entre as fontes que responderam,
+        # pra não ficar preso numa fonte desatualizada enquanto outra já tem o resultado novo.
+        return max(candidatos, key=lambda d: d["numero"])
+
+    if isinstance(ultimo_erro, urllib.error.HTTPError) and ultimo_erro.code in (404, 500):
+        raise ErroDeBusca("Concurso não encontrado ou ainda não sorteado.", 404)
     if isinstance(ultimo_erro, urllib.error.HTTPError):
         raise ErroDeBusca(f"Não consegui buscar esse concurso agora (erro {ultimo_erro.code}).")
     raise ErroDeBusca(f"Não consegui buscar esse concurso agora: {ultimo_erro}")
@@ -526,6 +560,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._enviar_json({"erro": erro.mensagem}, erro.status)
                 return
             self._enviar_json(dados)
+            return
+
+        if url.path == "/api/debug-rede":
+            self._enviar_json(_diagnosticar_rede())
             return
 
         if url.path == "/api/proximo-concurso":

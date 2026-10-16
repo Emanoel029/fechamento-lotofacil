@@ -193,28 +193,6 @@ def _normalizar_formato_heroku(bruto: dict) -> dict:
 
 # Tenta sempre o site oficial primeiro; se ele bloquear o pedido (acontece em alguns
 # servidores de hospedagem na nuvem), tenta os espelhos na ordem abaixo.
-def _diagnosticar_rede() -> dict:
-    """Rota temporária só pra conferir, rodando de verdade no servidor publicado, se as
-    fontes oficiais continuam bloqueadas hoje — remover depois de conferir."""
-    alvos = {
-        "caixa_oficial_mais_recente": CAIXA_BASE,
-        "guidi_mais_recente": f"{CAIXA_BASE_RESERVA}/ultimo",
-        "heroku_mais_recente": f"{HEROKU_BASE_RESERVA}/latest",
-    }
-    resultado = {}
-    for nome, url in alvos.items():
-        try:
-            requisicao = urllib.request.Request(url, headers=_CABECALHOS_CAIXA)
-            with urllib.request.urlopen(requisicao, timeout=10) as resposta:
-                corpo = json.loads(resposta.read())
-                resultado[nome] = {"status": resposta.status, "numero": corpo.get("numero") or corpo.get("concurso")}
-        except urllib.error.HTTPError as erro:
-            resultado[nome] = {"erro_http": erro.code}
-        except Exception as erro:  # noqa: BLE001 - diagnóstico
-            resultado[nome] = {"excecao": f"{type(erro).__name__}: {erro}"}
-    return resultado
-
-
 GITHUB_RAW_ESPELHO = (
     "https://raw.githubusercontent.com/Emanoel029/fechamento-lotofacil/main/espelho/ultimo_resultado.json"
 )
@@ -575,10 +553,6 @@ class Handler(BaseHTTPRequestHandler):
                 self._enviar_json({"erro": erro.mensagem}, erro.status)
                 return
             self._enviar_json(dados)
-            return
-
-        if url.path == "/api/debug-rede":
-            self._enviar_json(_diagnosticar_rede())
             return
 
         if url.path == "/api/proximo-concurso":

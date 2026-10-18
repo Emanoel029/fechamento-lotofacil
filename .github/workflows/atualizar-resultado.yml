@@ -16,14 +16,10 @@ jobs:
       - name: Baixar o repositório
         uses: actions/checkout@v4
 
-      - name: Buscar o resultado mais recente na Caixa
+      - name: Buscar o resultado mais recente (Caixa e espelho guidi.dev.br, usa o mais novo)
         run: |
           mkdir -p espelho
-          curl -sS -f \
-            -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36" \
-            -H "Accept: application/json, text/plain, */*" \
-            "https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil" \
-            -o espelho/ultimo_resultado.json
+          python3 espelho/atualizar.py
 
       - name: Conferir se o arquivo é um JSON válido com número de concurso
         run: python3 -c "import json; d = json.load(open('espelho/ultimo_resultado.json')); assert d.get('numero'); print('concurso', d['numero'], 'ok')"

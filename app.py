@@ -14,6 +14,7 @@ import json
 import mimetypes
 import os
 import threading
+import time
 import urllib.error
 import urllib.request
 import uuid
@@ -203,7 +204,9 @@ _FONTES_DE_DADOS = [
         # direto da Caixa — não sofre o bloqueio que alguns servidores de hospedagem
         # tomam, porque aqui só estamos lendo um arquivo público, não fazendo a busca.
         "nome": "espelho (GitHub, atualizado automaticamente)",
-        "url": lambda numero: GITHUB_RAW_ESPELHO,
+        # O "?v=" com a hora atual evita que esse link sirva uma cópia em cache (o
+        # raw.githubusercontent.com guarda cache por alguns minutos por padrão).
+        "url": lambda numero: f"{GITHUB_RAW_ESPELHO}?v={int(time.time())}",
         "normalizar": _normalizar_formato_oficial,
     },
     {

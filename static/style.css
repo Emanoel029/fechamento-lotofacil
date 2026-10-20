@@ -247,6 +247,12 @@ button.botao-secundario {
   box-shadow: 0 0 0 1px #b8860b;
 }
 
+.contagem-par-impar {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #8a8f99;
+}
+
 .selo-pontos {
   font-size: 0.72rem;
   font-weight: 700;

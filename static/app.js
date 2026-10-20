@@ -350,8 +350,17 @@ function renderJogos(destino, jogos, sorteados) {
       cartao.classList.add(pontos === 15 ? "destaque-15" : "destaque-14");
     }
 
+    const pares = jogo.filter((n) => n % 2 === 0).length;
+    const impares = jogo.length - pares;
+
     const titulo = document.createElement("h3");
     titulo.textContent = `Aposta ${indice + 1}`;
+
+    const contagem = document.createElement("span");
+    contagem.className = "contagem-par-impar";
+    contagem.textContent = `(${pares}p ${impares}i)`;
+    titulo.appendChild(contagem);
+
     if (pontos !== null && pontos >= 14) {
       const selo = document.createElement("span");
       selo.className = "selo-pontos";

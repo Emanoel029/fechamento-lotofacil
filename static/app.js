@@ -354,7 +354,11 @@ function renderJogos(destino, jogos, sorteados) {
     const impares = jogo.length - pares;
 
     const titulo = document.createElement("h3");
-    titulo.textContent = `Aposta ${indice + 1}`;
+
+    const nomeAposta = document.createElement("span");
+    nomeAposta.className = "titulo-aposta";
+    nomeAposta.textContent = `Aposta ${indice + 1}`;
+    titulo.appendChild(nomeAposta);
 
     const contagem = document.createElement("span");
     contagem.className = "contagem-par-impar";

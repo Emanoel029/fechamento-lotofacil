@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import csv
 import io
+import itertools
 import json
 import mimetypes
 import os
@@ -427,33 +428,82 @@ def _pontos_da_descricao(descricao: str) -> int | None:
     return None
 
 
-def gerar_24_jogos(pool: list[int]) -> list[list[int]]:
+def gerar_24_jogos(pool: list[int], numeros_arriscados: set[int] | None = None) -> list[list[int]]:
     """Gera 24 jogos de 15 números a partir de um pool de 18 números.
 
-    Cada um dos 18 números fica de fora em exatamente 4 dos 24 jogos: o pool
-    é embaralhado de 4 jeitos diferentes (determinísticos) e, em cada um
-    deles, dividido em 6 grupos de 3 números que ficam de fora juntos em um
-    jogo cada — isso cobre cada número exatamente uma vez por rodada, e 4
-    rodadas de 6 jogos dão os 24 jogos no total.
+    Quando "numeros_arriscados" é informado — os números do pool que não
+    saíram no concurso de referência e o usuário optou por não excluir
+    (normalmente sobram 3) — o sistema PRIORIZA montar as exclusões de cada
+    jogo concentradas nesses números arriscados entre si, em vez de misturar
+    com números que realmente saíram no concurso de referência. Assim, se um
+    desses números arriscados "falhar" (sair de verdade no sorteio), muito
+    mais dos 24 jogos acertam a pontuação máxima possível — em vez de só 1
+    jogo acertar por sorte, como acontecia antes dessa melhoria.
+
+    Sem números arriscados informados (ex: apostas pro "próximo concurso",
+    sem nenhuma referência de quais números são mais incertos), cai num
+    rodízio equilibrado simples entre todos os números do pool.
     """
-    pool = sorted(pool)
-    tamanho = len(pool)
-    passos = [1, 5, 7, 11]  # coprimos com 18: garantem reembaralhar o pool inteiro
+    pool_set = set(pool)
+    arriscados = sorted((numeros_arriscados or set()) & pool_set)
+    seguros = sorted(pool_set - set(arriscados))
 
     jogos: list[list[int]] = []
     jogos_vistos: set[frozenset[int]] = set()
 
-    for rodada, passo in enumerate(passos):
-        deslocamento = rodada * 3
-        ordem = [pool[(i * passo + deslocamento) % tamanho] for i in range(tamanho)]
-        for inicio in range(0, tamanho, EXCLUIDOS_POR_JOGO):
-            excluidos_do_jogo = frozenset(ordem[inicio: inicio + EXCLUIDOS_POR_JOGO])
-            jogo = sorted(set(pool) - excluidos_do_jogo)
-            chave = frozenset(jogo)
-            if chave in jogos_vistos:
-                continue
-            jogos_vistos.add(chave)
-            jogos.append(jogo)
+    def adicionar(excluidos_do_jogo: frozenset[int]) -> None:
+        if len(jogos) >= TOTAL_DE_JOGOS or excluidos_do_jogo in jogos_vistos:
+            return
+        jogos_vistos.add(excluidos_do_jogo)
+        jogos.append(sorted(pool_set - excluidos_do_jogo))
+
+    # Camada 1: excluir só números arriscados entre si — o "jogo perfeito" se
+    # todos os arriscados considerados falharem juntos.
+    if len(arriscados) >= EXCLUIDOS_POR_JOGO:
+        for combo in itertools.combinations(arriscados, EXCLUIDOS_POR_JOGO):
+            if len(jogos) >= TOTAL_DE_JOGOS:
+                break
+            adicionar(frozenset(combo))
+
+    # Camada 2: 2 arriscados + 1 seguro — cobre bem o caso mais comum, que é
+    # só 1 dos números arriscados falhar.
+    if len(jogos) < TOTAL_DE_JOGOS and len(arriscados) >= 2 and seguros:
+        pares_arriscados = list(itertools.combinations(arriscados, 2))
+        limite = len(pares_arriscados) * len(seguros)
+        for i in range(limite):
+            if len(jogos) >= TOTAL_DE_JOGOS:
+                break
+            par = pares_arriscados[i % len(pares_arriscados)]
+            seguro = seguros[(i // len(pares_arriscados)) % len(seguros)]
+            adicionar(frozenset(par) | {seguro})
+
+    # Camada 3: 1 arriscado + 2 seguros.
+    if len(jogos) < TOTAL_DE_JOGOS and arriscados and len(seguros) >= 2:
+        pares_seguros = list(itertools.combinations(seguros, 2))
+        limite = len(arriscados) * len(pares_seguros)
+        for i in range(limite):
+            if len(jogos) >= TOTAL_DE_JOGOS:
+                break
+            risco = arriscados[i % len(arriscados)]
+            par = pares_seguros[(i // len(arriscados)) % len(pares_seguros)]
+            adicionar(frozenset(par) | {risco})
+
+    # Camada 4 (reserva): rodízio equilibrado entre todo o pool, pra completar
+    # os jogos que ainda faltarem — ou gerar tudo, quando não há números
+    # arriscados informados.
+    if len(jogos) < TOTAL_DE_JOGOS:
+        pool_ordenado = sorted(pool_set)
+        tamanho = len(pool_ordenado)
+        passos = [1, 5, 7, 11, 13, 17]  # coprimos com 18, dá várias rodadas diferentes
+        for rodada, passo in enumerate(passos):
+            if len(jogos) >= TOTAL_DE_JOGOS:
+                break
+            deslocamento = rodada * EXCLUIDOS_POR_JOGO
+            ordem = [pool_ordenado[(i * passo + deslocamento) % tamanho] for i in range(tamanho)]
+            for inicio in range(0, tamanho, EXCLUIDOS_POR_JOGO):
+                if len(jogos) >= TOTAL_DE_JOGOS:
+                    break
+                adicionar(frozenset(ordem[inicio: inicio + EXCLUIDOS_POR_JOGO]))
 
     return jogos[:TOTAL_DE_JOGOS]
 
@@ -679,7 +729,6 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         pool = sorted(set(TODOS_OS_NUMEROS) - excluidos_set)
-        jogos = gerar_24_jogos(pool)
 
         if corpo.get("modoProximo"):
             try:
@@ -687,6 +736,9 @@ class Handler(BaseHTTPRequestHandler):
             except ErroDeBusca as erro:
                 self._enviar_json({"erro": erro.mensagem}, erro.status)
                 return
+            # Sem concurso de referência, não há como saber quais números são
+            # "arriscados" — usa o rodízio equilibrado padrão.
+            jogos = gerar_24_jogos(pool)
             dados_concurso = {
                 "concurso": proximo["concurso"],
                 "data": proximo["data"],
@@ -703,6 +755,10 @@ class Handler(BaseHTTPRequestHandler):
             self._enviar_json({"erro": erro.mensagem}, erro.status)
             return
 
+        # Números que não saíram nesse concurso e o usuário optou por não
+        # excluir — são os "arriscados" que o gerador vai priorizar agrupar.
+        numeros_arriscados = set(dados_concurso["ausentes"]) - excluidos_set
+        jogos = gerar_24_jogos(pool, numeros_arriscados)
         comparacao = comparar_jogos(jogos, dados_concurso["sorteados"], dados_concurso["premios"])
 
         self._enviar_json({

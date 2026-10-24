@@ -98,6 +98,17 @@ main {
   font-size: 0.9rem;
 }
 
+.aviso {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--cor-laranja) 45%, var(--cor-borda));
+  background: color-mix(in srgb, var(--cor-laranja) 10%, var(--cor-cartao));
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--cor-texto);
+}
+
 .linha-modo {
   display: flex;
   gap: 8px;

@@ -287,15 +287,20 @@ def buscar_concurso_na_caixa(numero: int | None) -> dict:
         "sorteados": sorteados,
         "ausentes": ausentes,
         "premios": premios,
+        "proximoConcurso": dados.get("numeroConcursoProximo"),
+        "dataProximoConcurso": dados.get("dataProximoConcurso"),
+        "valorEstimadoProximoConcurso": dados.get("valorEstimadoProximoConcurso", 0) or 0,
     }
 
 
 def buscar_proximo_concurso() -> dict:
-    dados = _buscar_dados_brutos_na_caixa(None)
+    ultimo = buscar_concurso_na_caixa(None)
     return {
-        "concurso": dados.get("numeroConcursoProximo"),
-        "data": dados.get("dataProximoConcurso"),
-        "valorEstimado": dados.get("valorEstimadoProximoConcurso", 0) or 0,
+        "concurso": ultimo["proximoConcurso"],
+        "data": ultimo["dataProximoConcurso"],
+        "valorEstimado": ultimo["valorEstimadoProximoConcurso"],
+        "ausentesUltimoConcurso": ultimo["ausentes"],
+        "numeroUltimoConcurso": ultimo["concurso"],
     }
 
 
@@ -732,16 +737,20 @@ class Handler(BaseHTTPRequestHandler):
 
         if corpo.get("modoProximo"):
             try:
-                proximo = buscar_proximo_concurso()
+                # Busca o último concurso já sorteado (pra saber quais números
+                # não saíram nele — a mesma referência que a estratégia usa) e
+                # usa ela pra montar os jogos do próximo concurso de forma
+                # mais consistente, igual já fazemos pro "sorteio já realizado".
+                ultimo = buscar_concurso_na_caixa(None)
             except ErroDeBusca as erro:
                 self._enviar_json({"erro": erro.mensagem}, erro.status)
                 return
-            # Sem concurso de referência, não há como saber quais números são
-            # "arriscados" — usa o rodízio equilibrado padrão.
-            jogos = gerar_24_jogos(pool)
+
+            numeros_arriscados = set(ultimo["ausentes"]) - excluidos_set
+            jogos = gerar_24_jogos(pool, numeros_arriscados)
             dados_concurso = {
-                "concurso": proximo["concurso"],
-                "data": proximo["data"],
+                "concurso": ultimo["proximoConcurso"],
+                "data": ultimo["dataProximoConcurso"],
                 "sorteados": None,
                 "ausentes": None,
                 "premios": None,

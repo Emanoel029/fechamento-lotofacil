@@ -51,6 +51,8 @@ const el = {
   resultadoProximo: document.getElementById("resultado-proximo"),
   numeroProximo: document.getElementById("numero-proximo"),
   dataProximo: document.getElementById("data-proximo"),
+  numeroUltimoProximo: document.getElementById("numero-ultimo-proximo"),
+  gradeUltimoProximo: document.getElementById("grade-ultimo-proximo"),
 
   gradeSelecao: document.getElementById("grade-selecao"),
   contadorSelecionados: document.getElementById("contador-selecionados"),
@@ -125,7 +127,7 @@ function mudarModo(modo) {
 
   el.legendaSelecao.textContent = ehRealizado
     ? "Clique em 7 números para excluir dos jogos. Os números com borda laranja são os que não saíram no sorteio escolhido — a estratégia sugere escolher entre eles."
-    : "Clique em 7 números que você acha que não vão sair no próximo sorteio.";
+    : "Clique em 7 números para excluir dos jogos. Os números com borda laranja são os que não saíram no último concurso — a estratégia sugere escolher entre eles, mas você pode marcar qualquer um dos 25.";
 
   estado.excluidos = new Set();
   esconderResultadosGerados();
@@ -173,10 +175,27 @@ async function buscarProximoConcurso() {
 
 function aplicarProximoConcurso(dados) {
   estado.proximoConcursoDados = dados;
+  estado.ausentes = new Set(dados.ausentesUltimoConcurso || []);
   el.numeroProximo.textContent = dados.concurso;
   el.dataProximo.textContent = dados.data || "—";
+  el.numeroUltimoProximo.textContent = dados.numeroUltimoConcurso ?? "—";
   el.resultadoProximo.classList.remove("oculto");
+  renderGradeUltimoProximo();
+  renderGradeSelecao();
   atualizarContador();
+}
+
+function renderGradeUltimoProximo() {
+  el.gradeUltimoProximo.innerHTML = "";
+  TODOS_OS_NUMEROS.forEach((numero) => {
+    const bola = document.createElement("div");
+    bola.className = "numero";
+    if (estado.ausentes.has(numero)) {
+      bola.classList.add("ausente");
+    }
+    bola.textContent = String(numero).padStart(2, "0");
+    el.gradeUltimoProximo.appendChild(bola);
+  });
 }
 
 // ---------- Buscar concurso ----------
@@ -271,7 +290,7 @@ function atualizarContador() {
     estado.modo === "realizado" ? estado.concursoDados !== null : estado.proximoConcursoDados !== null;
   el.botaoGerar.disabled = estado.excluidos.size !== 7 || !temConcursoDeReferencia;
 
-  if (estado.modo === "realizado" && estado.excluidos.size > 0) {
+  if (estado.excluidos.size > 0) {
     const palpites = Array.from(estado.excluidos).filter((n) => estado.ausentes.has(n)).length;
     const curingas = estado.excluidos.size - palpites;
     const palpitesTexto = `${palpites} que não ${palpites === 1 ? "saiu" : "saíram"}`;

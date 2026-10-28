@@ -1,21 +1,33 @@
 # LotoFácil — Fechamento Intermediário (24 apostas)
 
-Aplicativo web local que implementa a lógica do esboço enviado: o usuário escolhe **7 dezenas
-que devem ficar de fora** e o sistema gera **24 apostas de 15 dezenas** usando apenas as 18
-dezenas restantes. Sem dependências, sem servidor, sem rede.
+**Publicado em:** https://emanoel029.github.io/fechamento-lotofacil/
 
-![Tela de apostas geradas](docs/screenshots/resultados.png)
+Aplicativo web que implementa a lógica do esboço: o usuário escolhe **7 dezenas que devem ficar
+de fora** e o sistema gera **24 apostas de 15 dezenas** usando apenas as 18 restantes. Sem
+dependências, sem servidor, sem build — e com o **histórico real** dos concursos embutido.
+
+![Apostas geradas](docs/screenshots/resultados.png)
+
+## Novidades desta versão
+
+- **Simulação em tempo real**: a cada dezena marcada (ao completar 7), a tabela “Se você tivesse
+  jogado” é recalculada contra um concurso real escolhido no seletor — mostra quantidade por
+  faixa, prêmio oficial do concurso, custo e **saldo (lucro/prejuízo)**.
+- **Histórico real da Caixa**: 3.815 concursos (29/09/2003 a 27/10/2026), com as 15 dezenas e os
+  valores de premiação de cada faixa.
+- **Pares/ímpares por aposta**: cada cartão mostra `Aposta 6 (4p 11i)`.
+- **Conferência por aposta**: selo com os pontos feitos no concurso escolhido.
+- **Exportação** com pares, ímpares, acertos, custo e saldo.
 
 ## Como abrir
 
 ```bash
-xdg-open index.html          # abre direto no navegador
-# ou, para servir localmente:
+xdg-open index.html          # local
+# ou
 npm start                    # http://localhost:8080
 ```
 
-O estado (seleção, resultado do concurso, jogos salvos e base de tendências) fica no
-`localStorage` do navegador.
+O estado (seleção, concurso escolhido, preço da aposta e jogos salvos) fica no `localStorage`.
 
 ## A regra do jogo
 
@@ -24,7 +36,7 @@ O estado (seleção, resultado do concurso, jogos salvos e base de tendências) 
 - Cada aposta tem 15 dezenas do pool → cada aposta **omite exatamente 3** dezenas do pool.
 - 24 apostas distintas, todas de 15 dezenas.
 
-Essa é a dualidade que sustenta o sistema:
+Dualidade que sustenta o sistema:
 
 ```
 aposta (15 dezenas)  ↔  trio omitido (3 dezenas)     15 + 3 = 18
@@ -52,8 +64,8 @@ Se alguma exclusão errar, o pior caso do **melhor** resultado cai:
 | 3 | 11 pontos |
 | 4 | 10 pontos (sem prêmio) |
 
-Valores calculados exaustivamente sobre **todas** as combinações possíveis de dezenas não
-sorteadas dentro do pool — não é estimativa. Reproduza com `npm run verify`.
+Calculado exaustivamente sobre **todas** as combinações possíveis de dezenas não sorteadas
+dentro do pool — não é estimativa. Reproduza com `npm run verify`.
 
 Distribuição média com as 7 exclusões corretas (24 apostas):
 
@@ -61,8 +73,8 @@ Distribuição média com as 7 exclusões corretas (24 apostas):
 |---|---|---|---|
 | 0,03 | 1,32 | 9,26 | 13,38 |
 
-Chance de acertar 15 pontos, dado que as 7 exclusões estão certas: **24/816 ≈ 2,94%**
-(existe exatamente 1 trio perfeito entre os 816 possíveis; o sistema cobre 24).
+Chance de 15 pontos, dado que as 7 exclusões estão certas: **24/816 ≈ 2,94%** (existe exatamente
+1 trio perfeito entre os 816 possíveis; o sistema cobre 24).
 
 ## Como as 24 apostas são escolhidas
 
@@ -70,81 +82,105 @@ Não é sorteio nem heurística: é um desenho combinatório verificável.
 
 1. O pool de 18 é dividido em dois grupos de 9.
 2. Em cada grupo aplica-se o plano afim **AG(2,3)**: as 12 retas de 3 pontos formam um
-   **sistema de triplas de Steiner STS(9)** — cada par de dezenas aparece em exatamente 1 reta
-   e cada dezena em exatamente 4 retas.
+   **sistema de triplas de Steiner STS(9)** — cada par de dezenas aparece em exatamente 1 reta e
+   cada dezena em exatamente 4 retas.
 3. 2 grupos × 12 retas = **24 trios omitidos**, que viram as 24 apostas.
 
-Consequências diretas:
+Consequências: cada dezena é omitida 4 vezes (aparece em 20 apostas); os 72 pares internos são
+cobertos uma única vez; todo conjunto de 3 dezenas não sorteadas contém um par interno (pombos nos
+dois grupos) → alguma aposta omite só dezenas não sorteadas → **14 ou 15 pontos**.
 
-- cada dezena do pool é omitida 4 vezes → aparece em 20 apostas;
-- os 72 pares internos aos grupos são cobertos exatamente uma vez, sem repetição;
-- todo conjunto de 3 dezenas não sorteadas contém um par interno (princípio da casa dos
-  pombos nos dois grupos) → alguma aposta omite só dezenas não sorteadas → **14 ou 15 pontos**.
+## Simulação retroativa (a tabela do esboço)
 
-A semente (`Novo padrão`) apenas reetiqueta o pool; as garantias são invariantes.
+No seletor da tela **Criar jogo** há os 100 concursos mais recentes. Para o concurso escolhido, o
+app usa as dezenas sorteadas e os **valores oficiais de premiação** daquele concurso. Exemplo real
+(concurso 3815, excluídas `01 02 07 08 18 20 24`):
 
-## Conferência e prêmios
+| Faixa | Quantidade | Prêmio |
+|---|---|---|
+| 14 pontos | 1 | R$ 1.943,41 |
+| 13 pontos | 10 | R$ 350,00 |
+| 12 pontos | 13 | R$ 182,00 |
+| **Total** | **24** | **R$ 2.475,41** |
+| Custo (24 × R$ 3,50) | | R$ 84,00 |
+| **Saldo** | | **+R$ 2.391,41** |
 
-Na tela **Criar jogo** informe concurso, data e as 15 dezenas sorteadas. A tabela mostra
-quantidade por faixa (11–15 pontos) e o prêmio **subtotal** por faixa, com total — o mesmo
-formato do esboço. Os valores unitários por aposta ficam em “Valores de prêmio (editáveis)”,
-porque o prêmio real varia a cada concurso.
+As quantidades (13×12, 10×13, 1×14) são idênticas às do esboço; a diferença é que agora os
+prêmios são os reais do concurso, não valores fictícios.
 
-As apostas também ganham um selo com os acertos e a tela **Resultados** resume a conferência.
+O **preço por aposta** é editável (padrão R$ 3,50) e entra no cálculo de custo/saldo.
+
+## Tendências com histórico real
+
+Base embutida: **3.815 concursos** (concurso 1, de 29/09/2003, até o 3815, de 27/10/2026), com
+fonte `loteriascaixa-api` (espelho dos dados da Caixa). A tela mostra frequência por dezena em
+janelas de 10 a 100 concursos, marcação quente/frio e sugere as 7 menos frequentes.
+
+A sugestão é **heurística**, não previsão: sorteios independentes não têm memória.
+
+### Atualizar o histórico
+
+```bash
+python3 tools/build_history.py     # baixa da API e regenera data/historico.js
+```
+
+O arquivo tem ~350 KB e formato `[concurso, data, dezenas, prêmios]` ordenado do mais antigo ao
+mais novo.
 
 ## Exportação
 
 “Exportar jogo para Excel” gera **CSV com BOM e separador `;`** (abre direto no Excel pt-BR):
-cabeçalho com excluídas/concurso, as 24 linhas de dezenas, acertos por aposta e o resumo de
-prêmios. O arquivo é baixado como `lotofacil-<excluidas>-AAAAMMDD.csv`.
-
-## Tendências (heurística, não previsão)
-
-A tela **Tendências** aceita uma base colada de resultados (um concurso por linha, com as 15
-dezenas) e mostra frequência por dezena nos últimos 10/20/30/40/50/100 concursos, com marcação
-de dezenas quentes/frias. O botão “Usar sugestão” aplica as 7 menos frequentes — é leitura de
-histórico, **sem garantia de acerto**; sorteios independentes não têm memória.
+excluídas, concurso, as 24 linhas com dezenas + **Pares/Ímpares** + acertos, resumo por faixa,
+total, custo e saldo.
 
 ## Estrutura
 
 ```
-index.html              interface (5 telas: Início, Criar, Resultados, Salvos, Tendências)
-styles.css              estilos
-engine.js               núcleo puro: desenho, geração, pontuação, garantias, CSV
-app.js                  estado, navegação, renderização, localStorage
-tests/engine.test.mjs   10 testes (estrutura, balanceamento, garantia exaustiva, CSV)
-tools/verify_design.py  verificação matemática independente (Python)
-tools/ui-smoke.mjs      smoke test de UI via Chrome headless + CDP
-docs/screenshots/       capturas das telas
+index.html               interface (Início, Criar, Resultados, Salvos, Tendências)
+styles.css               estilos
+engine.js                núcleo puro: desenho, geração, pontuação, paridade, saldo, CSV
+app.js                   estado, navegação, simulação em tempo real, localStorage
+data/historico.js        histórico real (3.815 concursos + prêmios)
+tests/engine.test.mjs    11 testes (estrutura, garantia exaustiva, paridade, saldo, CSV)
+tools/build_history.py   gera data/historico.js a partir da API
+tools/verify_design.py   verificação matemática independente (Python)
+tools/ui-smoke.mjs       smoke test de UI via Chrome headless + CDP
+docs/screenshots/        capturas das telas
 ```
 
 ## Testes
 
 ```bash
-npm test          # 10 testes do núcleo (node:test)
+npm test          # 11 testes do núcleo (node:test)
 npm run verify    # confere o desenho e as garantias em Python
-npm run smoke     # dirige a interface no Chrome headless e valida o fluxo completo
+npm run smoke     # dirige a interface no Chrome headless (local ou LF_URL=...)
 ```
 
-O smoke test confirma: 7 selecionadas → 24 cartões, garantia visível, conferência do concurso
-3815 (13×12, 10×13, 1×14 — idêntico ao esboço), jogo salvo e CSV gerado, sem exceções de
-JavaScript.
+O smoke test valida: seleção de 7 → simulação ao vivo; 24 cartões com paridade; conferência do
+concurso 3815; jogo salvo; troca de concurso; tendências com a base real; CSV com custo/saldo.
 
-## Divergências corrigidas do esboço
+## Publicação
 
-- Nos prints, cada cartão exibe **18 dezenas**: com 7 excluídas fixas, uma aposta de 15
-  dezenas só pode ter 15. O código força 15.
-- No print, as 24 apostas aparecem **idênticas** (mesmo padrão de bolinhas). Aqui as 24 são
-  distintas, como exige qualquer fechamento.
-- A tabela do print (13×12, 10×13, 1×14) é reproduzida exatamente pelo desenho para o concurso
-  3815 e as excluídas `01 02 07 08 18 20 24`.
+O site é estático e está publicado no **GitHub Pages** a partir da branch `gh-pages` do
+repositório `Emanoel029/fechamento-lotofacil` (a branch `main` preserva o app Flask original).
+
+Para republicar:
+
+```bash
+git checkout gh-pages            # no clone do repositório
+# copie index.html, styles.css, engine.js, app.js, data/, docs/screenshots/ e README.md
+git add -A && git commit -m "Atualiza o app" && git push
+```
+
+Alternativas gratuitas: arrastar a pasta em https://app.netlify.com/drop ou publicar em
+Cloudflare Pages/Vercel (todas servem arquivos estáticos sem backend).
 
 ## Limites (honestos)
 
-- **Não prevê sorteio** e não aumenta o valor esperado de nenhuma aposta; organiza cobertura.
-- O sistema assume 7 exclusões fixas; não há fechamento com menos/menos dezenas.
-- Prêmios exibidos são simulados com valores editáveis.
+- **Não prevê sorteio** e não aumenta o valor esperado; organiza cobertura.
+- As quantidades por faixa variam conforme o concurso e as exclusões escolhidas.
 - “Sugestão” de tendências é heurística, não modelo preditivo.
-- Dados ficam só neste navegador (localStorage); “Jogos salvos” não sincroniza entre dispositivos.
+- Dados ficam no navegador (localStorage); “Jogos salvos” não sincroniza entre dispositivos.
+- O histórico é um retrato de 28/10/2026; rode `tools/build_history.py` para atualizar.
 
 Jogue com responsabilidade.

@@ -314,7 +314,7 @@
     var h = document.createElement('h3');
     var label = document.createElement('span');
     var p = E.parity(g.numbers);
-    label.textContent = 'Aposta ' + g.index + ' (' + p.odds + 'p ' + p.evens + 'i)';
+    label.textContent = 'Aposta ' + g.index + ' (' + p.evens + 'p ' + p.odds + 'i)';
     h.appendChild(label);
     if (drawSet) {
       var hits = 0;

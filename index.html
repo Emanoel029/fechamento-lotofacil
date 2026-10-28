@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LotoFácil — Fechamento Intermediário</title>
+  <meta name="description" content="Gere 24 apostas de 15 dezenas a partir de 7 dezenas excluídas, com garantia de cobertura verificável.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#conteudo">Ir para o conteúdo</a>
+
+  <header class="topbar">
+    <div class="wrap topbar__inner">
+      <div class="brand">
+        <strong>Fechamento Intermediário</strong>
+        <span>LOTOFÁCIL EXPERT PROFISSIONAL</span>
+      </div>
+      <nav class="nav" id="nav" aria-label="Navegação principal">
+        <button type="button" data-view="inicio" aria-current="page">Início</button>
+        <button type="button" data-view="criar">Criar jogo</button>
+        <button type="button" data-view="resultados">Resultados</button>
+        <button type="button" data-view="salvos">Jogos salvos</button>
+        <button type="button" data-view="tendencias">Tendências</button>
+      </nav>
+      <div class="account" aria-hidden="true">
+        <span>Meus produtos ▾</span>
+        <span>Minha conta ▾</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap" id="conteudo">
+
+    <!-- ============================ INÍCIO ============================ -->
+    <section class="view" id="view-inicio">
+      <h1>Fechamento em 24 apostas</h1>
+      <p class="lead">
+        Você indica <strong>7 dezenas que acredita que não serão sorteadas</strong>. O sistema
+        monta <strong>24 apostas de 15 dezenas</strong> usando apenas as 18 restantes — e distribui
+        as apostas de forma equilibrada, com garantia matemática de cobertura.
+      </p>
+
+      <div class="steps">
+        <article class="step">
+          <span class="step__n">1</span>
+          <h2>Exclua 7 dezenas</h2>
+          <p>Entre 1 e 25, escolha as sete que ficam fora de todas as apostas.</p>
+        </article>
+        <article class="step">
+          <span class="step__n">2</span>
+          <h2>Gere as 24 apostas</h2>
+          <p>Cada aposta usa 15 das 18 dezenas restantes; todas as 24 são diferentes.</p>
+        </article>
+        <article class="step">
+          <span class="step__n">3</span>
+          <h2>Confira e exporte</h2>
+          <p>Escolha um concurso real do histórico, veja a premiação e exporte para o Excel.</p>
+        </article>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h2>O que a garantia significa</h2>
+          <p class="muted">
+            Se as 7 exclusões estiverem corretas (nenhuma delas sorteada), as 15 dezenas sorteadas
+            estão dentro do pool de 18. Toda aposta omite 3 dezenas desse pool, então:
+          </p>
+          <ul class="checks">
+            <li>Todas as 24 apostas fazem <strong>no mínimo 12 pontos</strong>.</li>
+            <li>Pelo menos uma aposta faz <strong>14 ou 15 pontos</strong> — sempre.</li>
+            <li>Cada dezena do pool aparece em <strong>20 das 24</strong> apostas.</li>
+          </ul>
+          <p class="muted small">
+            Se uma das 7 excluídas for sorteada, o pior caso cai para 13 pontos; duas, 12; três, 11.
+            Nenhum fechamento elimina o azar do sorteio: ele apenas organiza a cobertura.
+          </p>
+        </div>
+        <div class="card card--soft">
+          <h2>Como as 24 apostas são escolhidas</h2>
+          <p class="muted small">
+            Cada aposta de 15 dezenas equivale a um <em>trio omitido</em> do pool de 18
+            (15 + 3 = 18). O sistema usa o plano afim AG(2,3): divide o pool em dois grupos de 9 e
+            aplica, em cada grupo, as 12 retas de 3 pontos — um sistema de triplas de Steiner,
+            STS(9). Isso cobre todos os 72 pares internos exatamente uma vez e equilibra a
+            participação de cada dezena.
+          </p>
+          <p class="muted small">
+            <a class="link" href="https://pt.wikipedia.org/wiki/Plano_afim" target="_blank" rel="noopener">Plano afim</a>
+            ·
+            <a class="link" href="https://pt.wikipedia.org/wiki/Sistema_de_triplas_de_Steiner" target="_blank" rel="noopener">STS</a>
+          </p>
+        </div>
+      </div>
+
+      <p class="disclaimer">
+        Loteria é jogo de azar. Este sistema não prevê resultados nem aumenta o valor esperado das
+        apostas; ele apenas garante que a cobertura das 24 apostas seja equilibrada e verificável.
+        Jogue com responsabilidade.
+      </p>
+    </section>
+
+    <!-- ============================ CRIAR ============================ -->
+    <section class="view" id="view-criar" hidden>
+      <h1>Criar jogo</h1>
+      <p class="lead">Escolha <strong>7 números</strong> que devem ser excluídos de suas apostas:</p>
+
+      <div class="criar-grid">
+        <div class="picker-col">
+          <div class="volante" id="volante" role="group" aria-label="Dezenas de 1 a 25"></div>
+          <p class="hint" id="picker-hint" aria-live="polite">0 de 7 selecionadas</p>
+          <button type="button" class="btn btn--primary" id="btn-gerar" disabled>Gerar apostas</button>
+        </div>
+
+        <aside class="prize-col">
+          <div class="card">
+            <h2>Se você tivesse jogado</h2>
+            <p class="muted small">Simulação retroativa: as 24 apostas conferidas contra um concurso real.</p>
+            <label class="field">Concurso
+              <select id="sel-concurso"></select>
+            </label>
+            <div class="balls" id="draw-balls" hidden></div>
+            <table class="tbl" id="tbl-premios">
+              <caption class="sr-only">Prêmios por faixa no concurso selecionado</caption>
+              <thead>
+                <tr><th scope="col">Acerto</th><th scope="col">Quantidade</th><th scope="col">Prêmio (R$)</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+            <p class="muted small" id="prize-note"></p>
+            <div class="sim-summary" id="sim-summary" aria-live="polite"></div>
+          </div>
+          <div class="card card--soft">
+            <label class="field">Preço por aposta (R$)
+              <input id="inp-preco" type="number" min="0" step="0.01" inputmode="decimal" value="3.50">
+            </label>
+            <p class="muted small">Custo = 24 × preço. Os prêmios usam os valores oficiais do concurso selecionado.</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ============================ RESULTADOS ============================ -->
+    <section class="view" id="view-resultados" hidden>
+      <h1>Apostas geradas</h1>
+      <div class="lead" id="resumo-geracao">Com base nos números excluídos na etapa anterior, o sistema gerou as apostas abaixo.</div>
+      <p class="muted" id="resumo-conferencia" hidden></p>
+
+      <div class="actions">
+        <button type="button" class="btn btn--primary btn--wide" id="btn-salvar">Salvar este jogo</button>
+        <button type="button" class="btn btn--outline-green btn--wide" id="btn-exportar">Exportar jogo para Excel</button>
+        <button type="button" class="btn btn--ghost" id="btn-novo-padrao">Novo padrão</button>
+        <button type="button" class="btn btn--link" id="btn-ir-resultado">Trocar concurso</button>
+      </div>
+
+      <div class="empty" id="resultados-vazio">
+        Nenhum jogo gerado ainda.
+        <button type="button" class="link" data-view="criar">Escolher as 7 excluídas</button>.
+      </div>
+
+      <div class="games" id="games"></div>
+
+      <div class="card card--soft" id="guarantee-card" hidden>
+        <h2>Garantia do fechamento</h2>
+        <div class="guarantee-grid">
+          <div>
+            <p class="muted small" id="guarantee-summary"></p>
+            <ul class="checks" id="guarantee-list"></ul>
+          </div>
+          <table class="tbl tbl--compact">
+            <caption class="sr-only">Pior caso por quantidade de exclusões erradas</caption>
+            <thead><tr><th scope="col">Excluídas sorteadas</th><th scope="col">Pior melhor acerto</th></tr></thead>
+            <tbody id="guarantee-body"></tbody>
+          </table>
+        </div>
+        <p class="muted small">
+          Pior caso calculado sobre <em>todas</em> as combinações possíveis de dezenas não sorteadas
+          dentro do pool — não é estimativa.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============================ SALVOS ============================ -->
+    <section class="view" id="view-salvos" hidden>
+      <h1>Jogos salvos</h1>
+      <p class="lead">Seus fechamentos ficam guardados neste navegador.</p>
+      <div class="empty" id="salvos-vazio">
+        Nenhum jogo salvo. Gere um jogo e clique em “Salvar este jogo”.
+      </div>
+      <div class="saved" id="saved"></div>
+    </section>
+
+    <!-- ============================ TENDÊNCIAS ============================ -->
+    <section class="view" id="view-tendencias" hidden>
+      <h1>Tendências</h1>
+      <p class="lead">Escolha a quantidade de concursos para rastrear as tendências:</p>
+      <div class="chips" id="window-chips"></div>
+
+      <p class="muted" id="trend-base"></p>
+
+      <div class="grid-2" id="trend-results" hidden>
+        <div class="card">
+          <h2>Frequência por dezena</h2>
+          <p class="muted small" id="trend-summary"></p>
+          <table class="tbl tbl--compact">
+            <thead><tr><th scope="col">Dezena</th><th scope="col">Vezes</th><th scope="col">%</th><th scope="col">Tendência</th></tr></thead>
+            <tbody id="trend-body"></tbody>
+          </table>
+        </div>
+        <div class="card card--soft">
+          <h2>Sugestão de exclusão</h2>
+          <p class="muted small">
+            As 7 dezenas menos frequentes na janela escolhida. É uma heurística de leitura de
+            histórico — não uma previsão, e sem garantia de acerto.
+          </p>
+          <p class="suggestion" id="suggestion"></p>
+          <button type="button" class="btn btn--primary" id="btn-usar-sugestao" disabled>Usar sugestão em “Criar jogo”</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <noscript><p class="wrap">Este aplicativo precisa de JavaScript habilitado.</p></noscript>
+  <script src="data/historico.js"></script>
+  <script src="engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

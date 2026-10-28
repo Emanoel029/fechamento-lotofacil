@@ -127,6 +127,25 @@ python3 tools/build_history.py     # baixa da API e regenera data/historico.js
 O arquivo tem ~350 KB e formato `[concurso, data, dezenas, prêmios]` ordenado do mais antigo ao
 mais novo.
 
+## Atualização automática (novos concursos)
+
+O app se atualiza sozinho, em três camadas:
+
+1. **A cada visita** ele consulta a API da Caixa (2,7 KB). Se houver concurso mais novo que a
+   base embutida, ele é incluído na hora, com as dezenas e os prêmios oficiais; o seletor passa a
+   apontar para ele e os resultados novos ficam guardados no `localStorage`.
+2. **Se a Caixa falhar**, usa o espelho `espelho/ultimo_resultado.json` do repositório (atualizado
+   por um workflow a cada 20 minutos).
+3. **Com a página aberta**, nova consulta a cada 10 minutos e ao voltar para a aba — e há o botão
+   **Atualizar** ao lado do seletor.
+
+Além disso, o workflow `.github/workflows/atualizar-historico.yml` (na branch `main`) regenera
+`data/historico.js` **a cada 6 horas**, para que até as janelas longas de tendências (50/100
+concursos) fiquem completas mesmo para quem visita raramente.
+
+Limites: depende da API da Caixa estar no ar (o fallback pode atrasar até ~20 min) e resultados
+muito antigos que não passaram pelo app só entram na base pelo workflow de 6 horas.
+
 ## Exportação
 
 “Exportar jogo para Excel” gera **CSV com BOM e separador `;`** (abre direto no Excel pt-BR):

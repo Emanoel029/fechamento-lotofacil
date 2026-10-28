@@ -232,6 +232,35 @@
     return map;
   }
 
+  /**
+   * Normaliza a resposta da Caixa (ou do espelho) em uma linha do histórico:
+   * [concurso, "dd/mm/aaaa", dezenas[15], premios[15,14,13,12,11]].
+   * Retorna null se o payload não tiver um resultado válido.
+   */
+  function parseCaixaResult(payload) {
+    if (!payload || typeof payload !== 'object') return null;
+    var numero = parseInt(payload.numero, 10);
+    if (!isFinite(numero) || numero <= 0) return null;
+    var data = String(payload.dataApuracao || '').trim();
+    var raw = payload.dezenasSorteadasOrdemSorteio || payload.listaDezenas || [];
+    var dezenas = [];
+    raw.forEach(function (x) {
+      var n = parseInt(x, 10);
+      if (n >= 1 && n <= TOTAL && dezenas.indexOf(n) < 0) dezenas.push(n);
+    });
+    dezenas.sort(function (a, b) { return a - b; });
+    if (dezenas.length !== GAME_SIZE) return null;
+    var premios = [0, 0, 0, 0, 0];
+    (payload.listaRateioPremio || []).forEach(function (p) {
+      var faixa = parseInt(p.faixa, 10);
+      var valor = parseFloat(p.valorPremio);
+      if (faixa >= 1 && faixa <= 5 && isFinite(valor) && valor >= 0) {
+        premios[faixa - 1] = Math.round(valor * 100) / 100;
+      }
+    });
+    return [numero, data, dezenas, premios];
+  }
+
   /* ---------- pior caso (garantia) ---------- */
   function forEachCombination(pool, size, cb) {
     var idx = [];
@@ -346,6 +375,7 @@
     parity: parity,
     balance: balance,
     prizeMap: prizeMap,
+    parseCaixaResult: parseCaixaResult,
     worstCase: worstCase,
     parseDrawText: parseDrawText,
     formatBRL: formatBRL,

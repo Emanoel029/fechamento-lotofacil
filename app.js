@@ -7,6 +7,12 @@
   var BY_CONCURSO = {};
   HISTORY.forEach(function (row) { BY_CONCURSO[row[0]] = row; });
   var LATEST = HISTORY.length ? HISTORY[HISTORY.length - 1][0] : null;
+  var STATIC_LATEST = LATEST;
+  var EXTRAS_KEY = 'lotofacil.extras.v1';
+  var UPDATE_SOURCES = [
+    'https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil',
+    'https://raw.githubusercontent.com/Emanoel029/fechamento-lotofacil/main/espelho/ultimo_resultado.json'
+  ];
 
   var $ = function (sel, root) { return (root || document).querySelector(sel); };
   var $$ = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };
@@ -35,6 +41,37 @@
   function drawOf(row) { return row ? { concurso: row[0], data: row[1], dezenas: row[2] } : null; }
   function prizesOf(row) { return E.prizeMap(row ? row[3] : null); }
   function currentRow() { return rowOf(state.concurso); }
+
+  function addRow(row) {
+    if (!row || BY_CONCURSO[row[0]]) return false;
+    BY_CONCURSO[row[0]] = row;
+    HISTORY.push(row);
+    HISTORY.sort(function (a, b) { return a[0] - b[0]; });
+    LATEST = HISTORY[HISTORY.length - 1][0];
+    return true;
+  }
+
+  function persistExtras() {
+    try {
+      var extras = HISTORY.filter(function (r) { return r[0] > STATIC_LATEST; });
+      localStorage.setItem(EXTRAS_KEY, JSON.stringify(extras));
+    } catch (err) {
+      console.warn('Não foi possível guardar os resultados novos:', err);
+    }
+  }
+
+  function loadExtras() {
+    var raw;
+    try { raw = localStorage.getItem(EXTRAS_KEY); } catch (err) { return; }
+    if (!raw) return;
+    try {
+      JSON.parse(raw).forEach(function (row) {
+        if (Array.isArray(row) && row.length === 4 && Array.isArray(row[2]) && row[2].length === E.GAME_SIZE) {
+          addRow(row);
+        }
+      });
+    } catch (err) { /* ignora extra inválido */ }
+  }
 
   /* ---------------- persistência ---------------- */
   function saveState() {
@@ -221,6 +258,63 @@
       select.appendChild(fallback);
     }
     select.value = String(state.concurso);
+  }
+
+  function setUpdateStatus(text) {
+    var el = $('#update-status');
+    if (el) el.textContent = text;
+  }
+
+  function rerender() {
+    if (state.view === 'criar') renderCriar();
+    else if (state.view === 'resultados') renderResultados();
+    else if (state.view === 'tendencias') renderTrends();
+  }
+
+  var lastRefresh = 0;
+
+  function refreshLatest(manual) {
+    lastRefresh = Date.now();
+    var index = 0;
+    setUpdateStatus('Verificando novos resultados…');
+
+    function attempt() {
+      if (index >= UPDATE_SOURCES.length) {
+        setUpdateStatus('Sem conexão para atualizar agora · base local até o concurso ' + LATEST + '.');
+        if (manual) toast('Não foi possível atualizar agora.');
+        return;
+      }
+      var url = UPDATE_SOURCES[index++];
+      var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 7000);
+
+      fetch(url, { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined })
+        .then(function (res) {
+          clearTimeout(timer);
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.json();
+        })
+        .then(function (json) {
+          var row = E.parseCaixaResult(json);
+          if (!row) throw new Error('resultado inválido');
+          if (row[0] > LATEST) {
+            var previous = LATEST;
+            addRow(row);
+            persistExtras();
+            if (state.concurso === previous) state.concurso = row[0];
+            saveState();
+            setUpdateStatus('Atualizado agora: concurso ' + row[0] + ' (' + row[1] + ').');
+            rerender();
+            if (manual) toast('Novo resultado incluído: concurso ' + row[0] + '.');
+          } else {
+            setUpdateStatus('Base em dia: concurso ' + LATEST + ' (' + (rowOf(LATEST) ? rowOf(LATEST)[1] : '—') + ').');
+            if (manual) toast('Já está atualizado com o último concurso.');
+          }
+        })
+        .catch(function () { attempt(); });
+    }
+
+    attempt();
   }
 
   function renderCriar() {
@@ -556,9 +650,10 @@
     buildChips();
     var meta = $('#trend-base');
     if (meta) {
+      var extras = HISTORY.filter(function (r) { return r[0] > STATIC_LATEST; }).length;
       meta.textContent = HISTORY.length
         ? 'Base real: ' + HISTORY.length + ' concursos (concurso 1 a ' + LATEST + '), atualizada em ' +
-          (HISTORY_META.geradoEm || '—') + '.'
+          (HISTORY_META.geradoEm || '—') + (extras ? ' + ' + extras + ' resultado(s) novo(s) incluído(s) automaticamente' : '') + '.'
         : 'Histórico indisponível.';
     }
     renderTrendTable();
@@ -607,6 +702,7 @@
       });
     });
 
+    $('#btn-refresh').addEventListener('click', function () { refreshLatest(true); });
     $('#btn-gerar').addEventListener('click', function () {
       if (!ensureGeneration()) { toast('Selecione as 7 dezenas.'); return; }
       show('resultados');
@@ -656,6 +752,7 @@
 
   function init() {
     loadState();
+    loadExtras();
     bind();
     buildVolante();
     if (!BY_CONCURSO[state.concurso]) state.concurso = LATEST;
@@ -663,6 +760,13 @@
     renderCriar();
     var initial = (location.hash || '').replace('#', '');
     show(VIEWS.indexOf(initial) >= 0 ? initial : 'inicio');
+    refreshLatest(false);
+    setInterval(function () {
+      if (!document.hidden) refreshLatest(false);
+    }, 10 * 60 * 1000);
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden && Date.now() - lastRefresh > 2 * 60 * 1000) refreshLatest(false);
+    });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

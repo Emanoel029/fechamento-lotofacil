@@ -1,0 +1,57 @@
+name: Atualizar histórico do app (gh-pages)
+
+on:
+  schedule:
+    # A cada 6 horas. O resultado mais novo também é buscado em tempo real pelo app.
+    - cron: "23 */6 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar a branch gh-pages
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+
+      - name: Regenerar data/historico.js
+        run: |
+          python3 - <<'PY'
+          import json, urllib.request
+          from datetime import date
+
+          API = "https://loteriascaixa-api.herokuapp.com/api/lotofacil"
+          with urllib.request.urlopen(API, timeout=120) as r:
+              data = json.loads(r.read().decode("utf-8"))
+
+          rows = []
+          for item in data:
+              n = int(item["concurso"])
+              d = item["data"]
+              dz = sorted(int(x) for x in item["dezenas"])
+              assert len(dz) == 15 and len(set(dz)) == 15 and all(1 <= x <= 25 for x in dz)
+              pr = {p["faixa"]: round(float(p["valorPremio"]), 2) for p in item["premiacoes"]}
+              rows.append([n, d, dz, [pr.get(i, 0) for i in (1, 2, 3, 4, 5)]])
+
+          rows.sort(key=lambda r: r[0])
+          payload = {
+              "geradoEm": date.today().isoformat(),
+              "fonte": "Caixa Economica Federal (via loteriascaixa-api)",
+              "concursos": rows,
+          }
+          open("data/historico.js", "w", encoding="utf-8").write(
+              "window.LOTOFACIL_HISTORICO=" + json.dumps(payload, separators=(",", ":"), ensure_ascii=False) + ";\n"
+          )
+          print(len(rows), "concursos")
+          PY
+
+      - name: Publicar se mudou
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/historico.js
+          git diff --cached --quiet && echo "Sem mudanças." || (git commit -m "Atualiza histórico [automático]" && git push)

@@ -222,6 +222,7 @@
       (n === E.EXCLUDED_COUNT ? ' — simulação atualizada' : '');
     hint.classList.toggle('is-warn', n > 0 && n < E.EXCLUDED_COUNT);
     $('#btn-gerar').disabled = n !== E.EXCLUDED_COUNT;
+    $('#btn-limpar-selecao').disabled = n === 0;
   }
 
   /* ---------------- geração ---------------- */
@@ -739,6 +740,16 @@
       });
     });
 
+    $('#btn-limpar-selecao').addEventListener('click', function () {
+      if (!state.excluded.length) return;
+      state.excluded = [];
+      state.generation = null;
+      paintVolante();
+      updatePickerStatus();
+      updateSimulation();
+      saveState();
+      toast('Seleção limpa.');
+    });
     $('#btn-refresh').addEventListener('click', function () { refreshLatest(true); });
     $('#btn-gerar').addEventListener('click', function () {
       if (!ensureGeneration()) { toast('Selecione as 7 dezenas.'); return; }

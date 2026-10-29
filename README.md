@@ -15,6 +15,7 @@ dependências, sem servidor, sem build — e com o **histórico real** dos concu
   faixa, prêmio oficial do concurso, custo e **saldo (lucro/prejuízo)**.
 - **Histórico real da Caixa**: 3.815 concursos (29/09/2003 a 27/10/2026), com as 15 dezenas e os
   valores de premiação de cada faixa.
+- **Limpar seleção**: um clique remove as 7 dezenas marcadas e zera a simulação.
 - **Busca por concurso**: digite qualquer número (1 a 3.816) no campo e clique em Buscar; o app carrega aquele resultado.
 - **Pares/ímpares por aposta**: cada cartão mostra `Aposta 6 (4p 11i)`.
 - **Conferência por aposta**: selo com os pontos feitos no concurso escolhido.

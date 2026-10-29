@@ -109,6 +109,8 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1
 .volante button.is-selected { background: var(--red); border-color: var(--red); color: #fff; box-shadow: 0 2px 6px rgba(227, 6, 19, .35); }
 .volante button.is-selected:hover { background: #c90511; }
 
+.picker-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+
 .hint { margin: 16px 0; color: var(--muted); font-size: 14.5px; min-height: 22px; }
 .hint.is-warn { color: #b45309; }
 

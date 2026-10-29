@@ -117,9 +117,16 @@
           <div class="card">
             <h2>Se você tivesse jogado</h2>
             <p class="muted small">Simulação retroativa: as 24 apostas conferidas contra um concurso real.</p>
-            <label class="field">Concurso
-              <select id="sel-concurso"></select>
-            </label>
+            <div class="field">
+              <label for="inp-concurso">Concurso</label>
+              <div class="search-row">
+                <input id="inp-concurso" type="text" inputmode="numeric" list="lista-concursos"
+                       placeholder="Ex.: 3816" autocomplete="off">
+                <button type="button" class="btn btn--ghost" id="btn-buscar">Buscar</button>
+              </div>
+              <datalist id="lista-concursos"></datalist>
+              <p class="muted small" id="concurso-hint"></p>
+            </div>
             <p class="update"><span id="update-status" aria-live="polite">Verificando novos resultados…</span>
               <button type="button" class="link" id="btn-refresh">Atualizar</button></p>
             <div class="balls" id="draw-balls" hidden></div>

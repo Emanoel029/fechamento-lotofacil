@@ -242,22 +242,17 @@
   }
 
   /* ---------------- criar / simulação ---------------- */
-  function buildConcursoOptions() {
-    var select = $('#sel-concurso');
-    select.innerHTML = '';
-    HISTORY.slice(-100).reverse().forEach(function (row) {
+  function buildConcursoList() {
+    var list = $('#lista-concursos');
+    list.innerHTML = '';
+    var frag = document.createDocumentFragment();
+    for (var i = HISTORY.length - 1; i >= 0; i--) {
       var opt = document.createElement('option');
-      opt.value = String(row[0]);
-      opt.textContent = row[0] + ' · ' + row[1];
-      select.appendChild(opt);
-    });
-    if (state.concurso && !BY_CONCURSO[state.concurso]) {
-      var fallback = document.createElement('option');
-      fallback.value = String(state.concurso);
-      fallback.textContent = String(state.concurso);
-      select.appendChild(fallback);
+      opt.value = String(HISTORY[i][0]);
+      opt.label = HISTORY[i][1];
+      frag.appendChild(opt);
     }
-    select.value = String(state.concurso);
+    list.appendChild(frag);
   }
 
   function setUpdateStatus(text) {
@@ -272,6 +267,34 @@
   }
 
   var lastRefresh = 0;
+  var pendingConcurso = null;
+
+  function applyConcurso(value) {
+    var n = parseInt(String(value || '').trim(), 10);
+    if (!isFinite(n) || n < 1) {
+      toast('Digite um número de concurso válido.');
+      return;
+    }
+    if (BY_CONCURSO[n]) {
+      pendingConcurso = null;
+      state.concurso = n;
+      saveState();
+      renderBalls();
+      updateSimulation();
+      renderResultados();
+      $('#inp-concurso').value = String(n);
+      setUpdateStatus('Concurso ' + n + ' (' + BY_CONCURSO[n][1] + ') carregado.');
+      return;
+    }
+    if (n > LATEST) {
+      pendingConcurso = n;
+      refreshLatest(false);
+      setUpdateStatus('Concurso ' + n + ' ainda não está na base (último: ' + LATEST + '). Verificando…');
+      return;
+    }
+    setUpdateStatus('Concurso ' + n + ' não encontrado na base.');
+    toast('Concurso ' + n + ' não encontrado.');
+  }
 
   function refreshLatest(manual) {
     lastRefresh = Date.now();
@@ -301,11 +324,20 @@
             var previous = LATEST;
             addRow(row);
             persistExtras();
+            buildConcursoList();
             if (state.concurso === previous) state.concurso = row[0];
+            if (pendingConcurso && BY_CONCURSO[pendingConcurso]) {
+              state.concurso = pendingConcurso;
+              pendingConcurso = null;
+            }
             saveState();
             setUpdateStatus('Atualizado agora: concurso ' + row[0] + ' (' + row[1] + ').');
             rerender();
             if (manual) toast('Novo resultado incluído: concurso ' + row[0] + '.');
+          } else if (pendingConcurso) {
+            setUpdateStatus('O concurso ' + pendingConcurso + ' ainda não saiu. Último: ' + LATEST +
+              ' (' + (rowOf(LATEST) ? rowOf(LATEST)[1] : '—') + ').');
+            pendingConcurso = null;
           } else {
             setUpdateStatus('Base em dia: concurso ' + LATEST + ' (' + (rowOf(LATEST) ? rowOf(LATEST)[1] : '—') + ').');
             if (manual) toast('Já está atualizado com o último concurso.');
@@ -321,7 +353,8 @@
     paintVolante();
     updatePickerStatus();
     if (!BY_CONCURSO[state.concurso]) state.concurso = LATEST;
-    buildConcursoOptions();
+    $('#inp-concurso').value = String(state.concurso);
+    $('#concurso-hint').textContent = 'Último concurso: ' + LATEST + ' · digite qualquer número de 1 a ' + LATEST + '.';
     $('#inp-preco').value = String(state.price);
     renderBalls();
     updateSimulation();
@@ -707,12 +740,9 @@
       if (!ensureGeneration()) { toast('Selecione as 7 dezenas.'); return; }
       show('resultados');
     });
-    $('#sel-concurso').addEventListener('change', function (e) {
-      state.concurso = Number(e.target.value);
-      renderBalls();
-      updateSimulation();
-      renderResultados();
-      saveState();
+    $('#btn-buscar').addEventListener('click', function () { applyConcurso($('#inp-concurso').value); });
+    $('#inp-concurso').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); applyConcurso(this.value); }
     });
     $('#inp-preco').addEventListener('change', function (e) {
       var v = parseFloat(e.target.value);
@@ -755,6 +785,7 @@
     loadExtras();
     bind();
     buildVolante();
+    buildConcursoList();
     if (!BY_CONCURSO[state.concurso]) state.concurso = LATEST;
     if (state.excluded.length === E.EXCLUDED_COUNT) ensureGeneration();
     renderCriar();

@@ -15,6 +15,7 @@ dependências, sem servidor, sem build — e com o **histórico real** dos concu
   faixa, prêmio oficial do concurso, custo e **saldo (lucro/prejuízo)**.
 - **Histórico real da Caixa**: 3.815 concursos (29/09/2003 a 27/10/2026), com as 15 dezenas e os
   valores de premiação de cada faixa.
+- **Busca por concurso**: digite qualquer número (1 a 3.816) no campo e clique em Buscar; o app carrega aquele resultado.
 - **Pares/ímpares por aposta**: cada cartão mostra `Aposta 6 (4p 11i)`.
 - **Conferência por aposta**: selo com os pontos feitos no concurso escolhido.
 - **Exportação** com pares, ímpares, acertos, custo e saldo.
@@ -92,8 +93,9 @@ dois grupos) → alguma aposta omite só dezenas não sorteadas → **14 ou 15 p
 
 ## Simulação retroativa (a tabela do esboço)
 
-No seletor da tela **Criar jogo** há os 100 concursos mais recentes. Para o concurso escolhido, o
-app usa as dezenas sorteadas e os **valores oficiais de premiação** daquele concurso. Exemplo real
+No campo **Concurso** da tela **Criar jogo** você digita qualquer número (1 a 3.816) e clica em
+Buscar — ou usa as sugestões do histórico. Para o concurso escolhido, o app usa as dezenas
+sorteadas e os **valores oficiais de premiação** daquele concurso. Exemplo real
 (concurso 3815, excluídas `01 02 07 08 18 20 24`):
 
 | Faixa | Quantidade | Prêmio |
@@ -112,7 +114,7 @@ O **preço por aposta** é editável (padrão R$ 3,50) e entra no cálculo de cu
 
 ## Tendências com histórico real
 
-Base embutida: **3.815 concursos** (concurso 1, de 29/09/2003, até o 3815, de 27/10/2026), com
+Base embutida: **3.816 concursos** (concurso 1, de 29/09/2003, até o 3816, de 28/10/2026), com
 fonte `loteriascaixa-api` (espelho dos dados da Caixa). A tela mostra frequência por dezena em
 janelas de 10 a 100 concursos, marcação quente/frio e sugere as 7 menos frequentes.
 
@@ -141,7 +143,8 @@ O app se atualiza sozinho, em três camadas:
 
 Além disso, o workflow `.github/workflows/atualizar-historico.yml` (na branch `main`) regenera
 `data/historico.js` **a cada 6 horas**, para que até as janelas longas de tendências (50/100
-concursos) fiquem completas mesmo para quem visita raramente.
+concursos) fiquem completas mesmo para quem visita raramente. Se você digitar um concurso que
+ainda não saiu, o app avisa e consulta a Caixa na hora.
 
 Limites: depende da API da Caixa estar no ar (o fallback pode atrasar até ~20 min) e resultados
 muito antigos que não passaram pelo app só entram na base pelo workflow de 6 horas.

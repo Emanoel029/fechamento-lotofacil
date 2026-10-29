@@ -293,6 +293,8 @@
       return;
     }
     setUpdateStatus('Concurso ' + n + ' não encontrado na base.');
+    var input = $('#inp-concurso');
+    if (input) input.value = String(state.concurso);
     toast('Concurso ' + n + ' não encontrado.');
   }
 
@@ -338,6 +340,8 @@
             setUpdateStatus('O concurso ' + pendingConcurso + ' ainda não saiu. Último: ' + LATEST +
               ' (' + (rowOf(LATEST) ? rowOf(LATEST)[1] : '—') + ').');
             pendingConcurso = null;
+            var pendingInput = $('#inp-concurso');
+            if (pendingInput) pendingInput.value = String(state.concurso);
           } else {
             setUpdateStatus('Base em dia: concurso ' + LATEST + ' (' + (rowOf(LATEST) ? rowOf(LATEST)[1] : '—') + ').');
             if (manual) toast('Já está atualizado com o último concurso.');

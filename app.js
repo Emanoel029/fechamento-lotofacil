@@ -24,7 +24,7 @@
   var state = {
     view: 'inicio',
     excluded: [],
-    seed: 0,
+    patterns: {},
     concurso: LATEST,
     price: 3.5,
     generation: null,
@@ -78,7 +78,7 @@
     try {
       localStorage.setItem(STORE, JSON.stringify({
         excluded: state.excluded,
-        seed: state.seed,
+        patterns: state.patterns,
         concurso: state.concurso,
         price: state.price,
         saved: state.saved,
@@ -100,7 +100,14 @@
           return Number.isInteger(n) && n >= 1 && n <= E.TOTAL;
         }).slice(0, E.EXCLUDED_COUNT);
       }
-      if (Number.isInteger(p.seed)) state.seed = p.seed;
+      if (p.patterns && typeof p.patterns === 'object') {
+        Object.keys(p.patterns).forEach(function (k) {
+          var v = p.patterns[k];
+          if (/^\d{1,2}(,\d{1,2}){6}$/.test(k) && Number.isInteger(v) && v >= 0 && v < 100000) {
+            state.patterns[k] = v;
+          }
+        });
+      }
       if (p.concurso != null && BY_CONCURSO[p.concurso]) state.concurso = p.concurso;
       if (typeof p.price === 'number' && p.price >= 0) state.price = p.price;
       if (Array.isArray(p.saved)) {
@@ -226,15 +233,35 @@
   }
 
   /* ---------------- geração ---------------- */
+  function patternKey(excluded) {
+    return excluded.slice().sort(function (a, b) { return a - b; }).join(',');
+  }
+
+  function seedFor(excluded) {
+    return state.patterns[patternKey(excluded)] || 0;
+  }
+
+  function updatePatternInfo() {
+    var nodes = $$('.pattern-info');
+    if (!nodes.length) return;
+    var text = state.excluded.length === E.EXCLUDED_COUNT
+      ? 'Padrão #' + seedFor(state.excluded) + ' · salvo automaticamente para estas 7 dezenas.'
+      : '';
+    nodes.forEach(function (n) { n.textContent = text; });
+    var zero = $('#btn-padrao-zero');
+    if (zero) zero.hidden = !(state.excluded.length === E.EXCLUDED_COUNT && seedFor(state.excluded) !== 0);
+  }
+
   function ensureGeneration() {
     if (state.excluded.length !== E.EXCLUDED_COUNT) { state.generation = null; return null; }
     var key = state.excluded.join(',');
-    if (state.generation && state.generation.seed === state.seed &&
+    var seed = seedFor(state.excluded);
+    if (state.generation && state.generation.seed === seed &&
         state.generation.excluded.join(',') === key) {
       return state.generation;
     }
     try {
-      state.generation = E.buildGames(state.excluded, { seed: state.seed });
+      state.generation = E.buildGames(state.excluded, { seed: seed });
     } catch (err) {
       console.error(err);
       state.generation = null;
@@ -363,6 +390,7 @@
     $('#inp-preco').value = String(state.price);
     renderBalls();
     updateSimulation();
+    updatePatternInfo();
   }
 
   function renderBalls() {
@@ -489,6 +517,7 @@
       guarantee.hidden = true;
       conf.hidden = true;
       resumo.textContent = 'Com base nos números excluídos na etapa anterior, o sistema gerou as apostas abaixo.';
+      updatePatternInfo();
       return;
     }
 
@@ -512,6 +541,7 @@
       row[2].forEach(function (n) { drawSet[n] = true; });
     }
     gen.games.forEach(function (g) { host.appendChild(renderGameCard(g, drawSet)); });
+    updatePatternInfo();
 
     if (row) {
       var score = E.scoreGames(gen.games, row[2], prizesOf(row));
@@ -610,7 +640,7 @@
 
       acts.appendChild(mkBtn('Abrir', 'btn--ghost', function () {
         state.excluded = entry.excluded.slice();
-        state.seed = entry.seed || 0;
+        state.patterns[patternKey(state.excluded)] = entry.seed || 0;
         state.concurso = BY_CONCURSO[entry.concurso] ? entry.concurso : LATEST;
         state.generation = null;
         saveState();
@@ -774,15 +804,27 @@
       if (!gen) return;
       exportGeneration(gen, state.concurso, gen.excluded.map(E.pad).join('-'));
     });
-    $('#btn-novo-padrao').addEventListener('click', function () {
+    $('#btn-padrao-zero').addEventListener('click', function () {
       if (!state.generation) return;
-      state.seed = (state.seed + 1) % 100000;
+      var key = patternKey(state.excluded);
+      state.patterns[key] = 0;
       state.generation = null;
       ensureGeneration();
       saveState();
       renderResultados();
       updateSimulation();
-      toast('Novo padrão gerado com as mesmas garantias.');
+      toast('Padrão #0 restaurado para estas dezenas.');
+    });
+    $('#btn-novo-padrao').addEventListener('click', function () {
+      if (!state.generation) return;
+      var key = patternKey(state.excluded);
+      state.patterns[key] = ((state.patterns[key] || 0) + 1) % 100000;
+      state.generation = null;
+      ensureGeneration();
+      saveState();
+      renderResultados();
+      updateSimulation();
+      toast('Padrão #' + state.patterns[key] + ' gerado e salvo para estas dezenas.');
     });
     $('#btn-usar-sugestao').addEventListener('click', function () {
       var sug = state.trends.suggestion;

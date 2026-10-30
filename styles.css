@@ -110,6 +110,8 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1
 .volante button.is-selected:hover { background: #c90511; }
 
 .picker-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.pattern-info { margin: 4px 0 0; }
+.pattern-reset { margin: 2px 0 0; font-size: 13px; }
 
 .hint { margin: 16px 0; color: var(--muted); font-size: 14.5px; min-height: 22px; }
 .hint.is-warn { color: #b45309; }

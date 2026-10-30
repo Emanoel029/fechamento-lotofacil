@@ -13,8 +13,9 @@ dependências, sem servidor, sem build — e com o **histórico real** dos concu
 - **Simulação em tempo real**: a cada dezena marcada (ao completar 7), a tabela “Se você tivesse
   jogado” é recalculada contra um concurso real escolhido no seletor — mostra quantidade por
   faixa, prêmio oficial do concurso, custo e **saldo (lucro/prejuízo)**.
-- **Histórico real da Caixa**: 3.815 concursos (29/09/2003 a 27/10/2026), com as 15 dezenas e os
+- **Histórico real da Caixa**: 3.816 concursos (29/09/2003 a 28/10/2026), com as 15 dezenas e os
   valores de premiação de cada faixa.
+- **Padrão salvo por seleção**: as 24 apostas dependem só das 7 dezenas e do padrão; o padrão escolhido fica guardado para aquela seleção e é reproduzido ao voltar (inclusive após recarregar a página).
 - **Limpar seleção**: um clique remove as 7 dezenas marcadas e zera a simulação.
 - **Busca por concurso**: digite qualquer número (1 a 3.816) no campo e clique em Buscar; o app carrega aquele resultado.
 - **Pares/ímpares por aposta**: cada cartão mostra `Aposta 6 (4p 11i)`.
@@ -91,6 +92,18 @@ Não é sorteio nem heurística: é um desenho combinatório verificável.
 Consequências: cada dezena é omitida 4 vezes (aparece em 20 apostas); os 72 pares internos são
 cobertos uma única vez; todo conjunto de 3 dezenas não sorteadas contém um par interno (pombos nos
 dois grupos) → alguma aposta omite só dezenas não sorteadas → **14 ou 15 pontos**.
+
+### Fidelidade das apostas (padrão por seleção)
+
+As 24 apostas são função de **duas coisas**: as 7 dezenas excluídas e o número do padrão. O app
+guarda, por seleção (ex.: `01,02,04,07,08,18,21`), qual padrão foi escolhido:
+
+- seleção nova começa no **Padrão #0**;
+- **Novo padrão** troca o padrão **somente daquelas 7 dezenas** e salva a escolha;
+- ao voltar para a mesma seleção — hoje ou depois de recarregar — as mesmas 24 apostas são
+  reproduzidas (ex.: concurso 3815 com `01 02 04 07 08 18 21` no Padrão #0 tem 1 aposta de
+  15 pontos na **Aposta 12**);
+- **Salvar este jogo** grava também o padrão, então o jogo salvo é um retrato imutável.
 
 ## Simulação retroativa (a tabela do esboço)
 

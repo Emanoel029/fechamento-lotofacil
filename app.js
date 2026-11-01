@@ -9,10 +9,9 @@
   var LATEST = HISTORY.length ? HISTORY[HISTORY.length - 1][0] : null;
   var STATIC_LATEST = LATEST;
   var EXTRAS_KEY = 'lotofacil.extras.v1';
-  var UPDATE_SOURCES = [
-    'https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil',
-    'https://raw.githubusercontent.com/Emanoel029/fechamento-lotofacil/main/espelho/ultimo_resultado.json'
-  ];
+  var CAIXA_LATEST = 'https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil';
+  var CAIXA_CONCURSO = CAIXA_LATEST + '/';
+  var ESPELHO = 'https://raw.githubusercontent.com/Emanoel029/fechamento-lotofacil/main/espelho/ultimo_resultado.json';
 
   var $ = function (sel, root) { return (root || document).querySelector(sel); };
   var $$ = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };
@@ -326,59 +325,99 @@
     toast('Concurso ' + n + ' não encontrado.');
   }
 
-  function refreshLatest(manual) {
-    lastRefresh = Date.now();
-    var index = 0;
-    setUpdateStatus('Verificando novos resultados…');
-
-    function attempt() {
-      if (index >= UPDATE_SOURCES.length) {
-        setUpdateStatus('Sem conexão para atualizar agora · base local até o concurso ' + LATEST + '.');
-        if (manual) toast('Não foi possível atualizar agora.');
-        return;
-      }
-      var url = UPDATE_SOURCES[index++];
+  function fetchRow(url, timeoutMs) {
+    return new Promise(function (resolve) {
       var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
-      var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 7000);
-
+      var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, timeoutMs || 7000);
       fetch(url, { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined })
         .then(function (res) {
-          clearTimeout(timer);
           if (!res.ok) throw new Error('HTTP ' + res.status);
           return res.json();
         })
         .then(function (json) {
-          var row = E.parseCaixaResult(json);
-          if (!row) throw new Error('resultado inválido');
-          if (row[0] > LATEST) {
-            var previous = LATEST;
-            addRow(row);
-            persistExtras();
-            buildConcursoList();
-            if (state.concurso === previous) state.concurso = row[0];
-            if (pendingConcurso && BY_CONCURSO[pendingConcurso]) {
-              state.concurso = pendingConcurso;
-              pendingConcurso = null;
-            }
-            saveState();
-            setUpdateStatus('Atualizado agora: concurso ' + row[0] + ' (' + row[1] + ').');
-            rerender();
-            if (manual) toast('Novo resultado incluído: concurso ' + row[0] + '.');
-          } else if (pendingConcurso) {
-            setUpdateStatus('O concurso ' + pendingConcurso + ' ainda não saiu. Último: ' + LATEST +
-              ' (' + (rowOf(LATEST) ? rowOf(LATEST)[1] : '—') + ').');
-            pendingConcurso = null;
-            var pendingInput = $('#inp-concurso');
-            if (pendingInput) pendingInput.value = String(state.concurso);
-          } else {
-            setUpdateStatus('Base em dia: concurso ' + LATEST + ' (' + (rowOf(LATEST) ? rowOf(LATEST)[1] : '—') + ').');
-            if (manual) toast('Já está atualizado com o último concurso.');
-          }
+          clearTimeout(timer);
+          resolve(E.parseCaixaResult(json));
         })
-        .catch(function () { attempt(); });
-    }
+        .catch(function () {
+          clearTimeout(timer);
+          resolve(null);
+        });
+    });
+  }
 
-    attempt();
+  // A Caixa às vezes mantém o endpoint "último" atrasado; o concurso específico já existe.
+  function probeNext(start, limit) {
+    var out = [];
+    var n = start;
+
+    function step() {
+      if (out.length >= limit) return Promise.resolve(out);
+      return fetchRow(CAIXA_CONCURSO + n).then(function (row) {
+        if (!row || row[0] !== n) return out;
+        out.push(row);
+        n += 1;
+        return step();
+      });
+    }
+    return step();
+  }
+
+  function applyFetched(rows, manual) {
+    var fresh = (rows || []).filter(function (r) { return r && r[0] > LATEST; })
+      .sort(function (a, b) { return a[0] - b[0]; });
+    var previous = LATEST;
+    fresh.forEach(function (row) { addRow(row); });
+    if (fresh.length) {
+      persistExtras();
+      buildConcursoList();
+      if (state.concurso === previous) state.concurso = LATEST;
+    }
+    if (pendingConcurso) {
+      if (BY_CONCURSO[pendingConcurso]) {
+        state.concurso = pendingConcurso;
+        pendingConcurso = null;
+      } else {
+        setUpdateStatus('O concurso ' + pendingConcurso + ' ainda não saiu. Último: ' + LATEST +
+          ' (' + (rowOf(LATEST) ? rowOf(LATEST)[1] : '—') + ').');
+        pendingConcurso = null;
+        var pi = $('#inp-concurso');
+        if (pi) pi.value = String(state.concurso);
+        saveState();
+        return;
+      }
+    }
+    if (fresh.length) {
+      setUpdateStatus('Atualizado agora: concurso ' + LATEST + ' (' +
+        (rowOf(LATEST) ? rowOf(LATEST)[1] : '—') + ').');
+      if (manual) toast('Novo resultado incluído: concurso ' + LATEST + '.');
+    } else {
+      setUpdateStatus('Base em dia: concurso ' + LATEST + ' (' +
+        (rowOf(LATEST) ? rowOf(LATEST)[1] : '—') + ').');
+      if (manual) toast('Já está atualizado com o último concurso.');
+    }
+    saveState();
+    rerender();
+  }
+
+  function refreshLatest(manual) {
+    lastRefresh = Date.now();
+    setUpdateStatus('Verificando novos resultados…');
+    var found = [];
+
+    fetchRow(CAIXA_LATEST).then(function (row) {
+      if (row) found.push(row);
+      var start = LATEST + 1; // preenche buracos desde a base local
+      return probeNext(start, 30).then(function (rows) {
+        found = found.concat(rows || []);
+        if (!found.length) {
+          return fetchRow(ESPELHO).then(function (espelho) {
+            if (espelho) found.push(espelho);
+          });
+        }
+      });
+    }).then(function () {
+      applyFetched(found, manual);
+    });
   }
 
   function renderCriar() {

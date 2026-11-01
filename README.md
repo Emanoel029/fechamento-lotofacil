@@ -13,11 +13,11 @@ dependências, sem servidor, sem build — e com o **histórico real** dos concu
 - **Simulação em tempo real**: a cada dezena marcada (ao completar 7), a tabela “Se você tivesse
   jogado” é recalculada contra um concurso real escolhido no seletor — mostra quantidade por
   faixa, prêmio oficial do concurso, custo e **saldo (lucro/prejuízo)**.
-- **Histórico real da Caixa**: 3.816 concursos (29/09/2003 a 28/10/2026), com as 15 dezenas e os
+- **Histórico real da Caixa**: 3.819 concursos (29/09/2003 a 01/11/2026), com as 15 dezenas e os
   valores de premiação de cada faixa.
 - **Padrão salvo por seleção**: as 24 apostas dependem só das 7 dezenas e do padrão; o padrão escolhido fica guardado para aquela seleção e é reproduzido ao voltar (inclusive após recarregar a página).
 - **Limpar seleção**: um clique remove as 7 dezenas marcadas e zera a simulação.
-- **Busca por concurso**: digite qualquer número (1 a 3.816) no campo e clique em Buscar; o app carrega aquele resultado.
+- **Busca por concurso**: digite qualquer número (1 a 3.819) no campo e clique em Buscar; o app carrega aquele resultado.
 - **Pares/ímpares por aposta**: cada cartão mostra `Aposta 6 (4p 11i)`.
 - **Conferência por aposta**: selo com os pontos feitos no concurso escolhido.
 - **Exportação** com pares, ímpares, acertos, custo e saldo.
@@ -107,7 +107,7 @@ guarda, por seleção (ex.: `01,02,04,07,08,18,21`), qual padrão foi escolhido:
 
 ## Simulação retroativa (a tabela do esboço)
 
-No campo **Concurso** da tela **Criar jogo** você digita qualquer número (1 a 3.816) e clica em
+No campo **Concurso** da tela **Criar jogo** você digita qualquer número (1 a 3.819) e clica em
 Buscar — ou usa as sugestões do histórico. Para o concurso escolhido, o app usa as dezenas
 sorteadas e os **valores oficiais de premiação** daquele concurso. Exemplo real
 (concurso 3815, excluídas `01 02 07 08 18 20 24`):
@@ -128,7 +128,7 @@ O **preço por aposta** é editável (padrão R$ 3,50) e entra no cálculo de cu
 
 ## Tendências com histórico real
 
-Base embutida: **3.816 concursos** (concurso 1, de 29/09/2003, até o 3816, de 28/10/2026), com
+Base embutida: **3.819 concursos** (concurso 1, de 29/09/2003, até o 3819, de 01/11/2026), com
 fonte `loteriascaixa-api` (espelho dos dados da Caixa). A tela mostra frequência por dezena em
 janelas de 10 a 100 concursos, marcação quente/frio e sugere as 7 menos frequentes.
 
@@ -150,10 +150,13 @@ O app se atualiza sozinho, em três camadas:
 1. **A cada visita** ele consulta a API da Caixa (2,7 KB). Se houver concurso mais novo que a
    base embutida, ele é incluído na hora, com as dezenas e os prêmios oficiais; o seletor passa a
    apontar para ele e os resultados novos ficam guardados no `localStorage`.
+   Quando o endpoint “último” da Caixa está atrasado (ela publica o concurso específico antes de
+   virar o “último”), o app sonda `/lotofacil/<número>` a partir do próximo e preenche a lacuna —
+   foi assim que o 3819 entrou mesmo com a Caixa ainda respondendo 3818 em `/lotofacil`.
 2. **Se a Caixa falhar**, usa o espelho `espelho/ultimo_resultado.json` do repositório (atualizado
    por um workflow a cada 20 minutos).
 3. **Com a página aberta**, nova consulta a cada 10 minutos e ao voltar para a aba — e há o botão
-   **Atualizar** ao lado do seletor.
+   **Atualizar** ao lado do seletor. A mesma sondagem por número específico é usada nesse caminho.
 
 Além disso, o workflow `.github/workflows/atualizar-historico.yml` (na branch `main`) regenera
 `data/historico.js` **a cada 6 horas**, para que até as janelas longas de tendências (50/100

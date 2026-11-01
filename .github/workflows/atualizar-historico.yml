@@ -25,22 +25,42 @@ jobs:
           from datetime import date
 
           API = "https://loteriascaixa-api.herokuapp.com/api/lotofacil"
-          with urllib.request.urlopen(API, timeout=120) as r:
-              data = json.loads(r.read().decode("utf-8"))
+          CAIXA = "https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil"
+          HEADERS = {"User-Agent": "Mozilla/5.0", "Accept": "application/json, text/plain, */*"}
+
+          def fetch(url):
+              req = urllib.request.Request(url, headers=HEADERS)
+              with urllib.request.urlopen(req, timeout=120) as r:
+                  return json.loads(r.read().decode("utf-8"))
 
           rows = []
-          for item in data:
+          for item in fetch(API):
               n = int(item["concurso"])
-              d = item["data"]
               dz = sorted(int(x) for x in item["dezenas"])
               assert len(dz) == 15 and len(set(dz)) == 15 and all(1 <= x <= 25 for x in dz)
               pr = {p["faixa"]: round(float(p["valorPremio"]), 2) for p in item["premiacoes"]}
-              rows.append([n, d, dz, [pr.get(i, 0) for i in (1, 2, 3, 4, 5)]])
-
+              rows.append([n, item["data"], dz, [pr.get(i, 0) for i in (1, 2, 3, 4, 5)]])
           rows.sort(key=lambda r: r[0])
+
+          # A Caixa pode manter o endpoint "ultimo" atrasado; o concurso específico já existe.
+          n = rows[-1][0] + 1
+          for _ in range(30):
+              try:
+                  item = fetch(f"{CAIXA}/{n}")
+              except Exception:
+                  break
+              if int(item.get("numero") or 0) != n:
+                  break
+              dz = sorted(int(x) for x in (item.get("dezenasSorteadasOrdemSorteio") or item.get("listaDezenas") or []))
+              if len(dz) != 15 or len(set(dz)) != 15 or any(x < 1 or x > 25 for x in dz):
+                  break
+              pr = {int(p["faixa"]): round(float(p["valorPremio"]), 2) for p in (item.get("listaRateioPremio") or [])}
+              rows.append([n, item.get("dataApuracao", ""), dz, [pr.get(i, 0) for i in (1, 2, 3, 4, 5)]])
+              n += 1
+
           payload = {
               "geradoEm": date.today().isoformat(),
-              "fonte": "Caixa Economica Federal (via loteriascaixa-api)",
+              "fonte": "Caixa Economica Federal (via loteriascaixa-api + consulta direta)",
               "concursos": rows,
           }
           open("data/historico.js", "w", encoding="utf-8").write(
